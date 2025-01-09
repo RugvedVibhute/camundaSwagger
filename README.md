@@ -1,35 +1,5 @@
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+SELECT sr_no, sold_to_address_role, sold_to_address_id, network_site_address_role, network_site_address_id, additional_partner_address_role, additional_partner_address_id
+	FROM public.other_address;
 
-public class ExtractStateOrProvince {
-    public static void main(String[] args) throws Exception {
-        String var = "{...}"; // Replace with your JSON string
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = objectMapper.readTree(var);
-
-        JsonNode relatedParty = rootNode.path("relatedParty");
-        String stateOrProvinceValue = null;
-
-        if (relatedParty.isArray()) {
-            for (JsonNode party : relatedParty) {
-                JsonNode contactMedium = party.path("contactMedium");
-                if (contactMedium.isArray() && contactMedium.size() > 0) {
-                    JsonNode stateOrProvince = contactMedium.get(0)
-                            .path("characteristic")
-                            .path("stateOrProvince");
-                    if (!stateOrProvince.isMissingNode()) {
-                        stateOrProvinceValue = stateOrProvince.asText();
-                        break; // Exit loop once found
-                    }
-                }
-            }
-        }
-
-        if (stateOrProvinceValue != null) {
-            System.out.println("State or Province: " + stateOrProvinceValue);
-        } else {
-            System.out.println("State or Province not found.");
-        }
-    }
-}
+SELECT sr_no, state_or_province, ship_to_address_id, ship_to_address_role
+	FROM public.ship_to_address;
