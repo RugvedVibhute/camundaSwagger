@@ -2,6 +2,7 @@ package dev.rugved.camundaSwagger.worker;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.rugved.camundaSwagger.entity.OtherAddress;
 import dev.rugved.camundaSwagger.entity.ShipToAddress;
 import dev.rugved.camundaSwagger.service.ShipToAddressService;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
@@ -56,9 +57,24 @@ public class ShipToAddressWorker {
                         address.getShipToAddressId(), address.getShipToAddressRole()));
             }
 
+            List<OtherAddress> otherAddresses = shipToAddressService.getOtherAddresses();
+            if (otherAddresses.isEmpty()) {
+                logger.warn("No additional addresses found in other_address table.");
+            } else {
+                otherAddresses.forEach(address -> logger.info(
+                        "SoldToAddressRole: {}, SoldToAddressId: {}, NetworkSiteAddressRole: {}, NetworkSiteAddressId: {}, " +
+                                "AdditionalPartnerAddressRole: {}, AdditionalPartnerAddressId: {}",
+                        address.getSoldToAddressRole(),
+                        address.getSoldToAddressId(),
+                        address.getNetworkSiteAddressRole(),
+                        address.getNetworkSiteAddressId(),
+                        address.getAdditionalPartnerAddressRole(),
+                        address.getAdditionalPartnerAddressId()
+                ));
+            }
+
         } catch (Exception e) {
             logger.error("Error processing job", e);
         }
     }
 }
-

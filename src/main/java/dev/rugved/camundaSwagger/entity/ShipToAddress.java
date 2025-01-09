@@ -2,14 +2,19 @@ package dev.rugved.camundaSwagger.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "ship_to_address", schema = "public")
 public class ShipToAddress {
 
+    @Id
+    @Column(name = "Sr_No")
+    private Long srNo;
+
     @Column(name = "ship_to_address_id")
-    private Long shipToAddressId;
+    private String shipToAddressId;
 
     @Column(name = "ship_to_address_role")
     private String shipToAddressRole;
@@ -18,11 +23,11 @@ public class ShipToAddress {
     private String stateOrProvince;
 
     // Getters and Setters
-    public Long getShipToAddressId() {
+    public String getShipToAddressId() {
         return shipToAddressId;
     }
 
-    public void setShipToAddressId(Long shipToAddressId) {
+    public void setShipToAddressId(String shipToAddressId) {
         this.shipToAddressId = shipToAddressId;
     }
 
