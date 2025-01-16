@@ -3,24 +3,24 @@ package dev.rugved.camundaSwagger.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "\"WBS_Header\"", schema = "public")
+@Table(name = "\"wbs_header\"", schema = "public")
 public class WBSHeader {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "Sr_No")
+    @Column(name = "sr_no")
     private Long srNo;
 
-    @Column(name = "State_or_Province")
+    @Column(name = "state_or_province")
     private String stateOrProvince;
 
-    @Column(name = "Customer_Type")
+    @Column(name = "customer_type")
     private String customerType;
 
-    @Column(name = "Customer_Sub_Type")
+    @Column(name = "customer_sub_type")
     private String customerSubType;
 
-    @Column(name = "WBS_Header")
+    @Column(name = "wbs_header")
     private String wbsHeader;
 
     // Getters and Setters

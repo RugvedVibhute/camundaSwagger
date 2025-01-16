@@ -10,6 +10,9 @@ import io.camunda.zeebe.spring.client.annotation.JobWorker;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.Map;
+
 @Component
 public class HardwareToBeShipped {
 
@@ -21,7 +24,7 @@ public class HardwareToBeShipped {
 
         // Fetch the variables from the job
         String var = job.getVariables();
-        System.out.println(var);
+        System.out.println("Job Variables: " + var);
 
         // Parse JSON using Jackson ObjectMapper
         ObjectMapper objectMapper = new ObjectMapper();
@@ -45,11 +48,19 @@ public class HardwareToBeShipped {
                     // Call the service with the networkElement value
                     String vendorType = service.getVendorType(networkElement);
                     System.out.println("Vendor Type: " + vendorType);
+
+                    // Create a map to hold the output variables
+                    Map<String, Object> output = new HashMap<>();
+                    output.put("vendorType", vendorType);
+
+                    // Complete the job and send variables back to Zeebe
+                    client.newCompleteCommand(job.getKey()).variables(output).send().join();
+                    System.out.println("Job completed with variables: " + output);
+
+                    // Exit the loop after processing the first matching characteristic
                     break;
                 }
             }
-
         }
-
     }
 }

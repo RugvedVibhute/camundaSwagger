@@ -3,17 +3,17 @@ package dev.rugved.camundaSwagger.entity;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "\"Network_Element_Type\"", schema = "public")
+@Table(name = "\"network_element_type\"", schema = "public")
 public class NetworkElementType {
 
     @Id
-    @Column(name = "Sr_No")
+    @Column(name = "sr_no")
     private Long srNo;
 
-    @Column(name = "Network_Element")
+    @Column(name = "network_element")
     private String networkElement;
 
-    @Column(name = "Vendor_Type")
+    @Column(name = "vendor_type")
     private String vendorType;
 
     // Getters and Setters

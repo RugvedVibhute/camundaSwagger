@@ -13,7 +13,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Component
 public class ShipToAddressWorker {
@@ -50,28 +52,37 @@ public class ShipToAddressWorker {
 
             // Fetch details from database
             List<ShipToAddress> addresses = shipToAddressService.getShipToAddressesByState(stateOrProvince);
-            if (addresses.isEmpty()) {
-                logger.warn("No Ship To Address found for state: {}", stateOrProvince);
+            List<OtherAddress> otherAddresses = shipToAddressService.getOtherAddresses();
+
+            // Prepare the output map
+            Map<String, Object> output = new HashMap<>();
+            if (!addresses.isEmpty()) {
+                output.put("shipToAddresses", addresses.stream()
+                        .map(address -> Map.of(
+                                "shipToAddressId", address.getShipToAddressId(),
+                                "shipToAddressRole", address.getShipToAddressRole()))
+                        .toList());
             } else {
-                addresses.forEach(address -> logger.info("Ship To Address ID: {}, Role: {}",
-                        address.getShipToAddressId(), address.getShipToAddressRole()));
+                logger.warn("No Ship To Address found for state: {}", stateOrProvince);
             }
 
-            List<OtherAddress> otherAddresses = shipToAddressService.getOtherAddresses();
-            if (otherAddresses.isEmpty()) {
-                logger.warn("No additional addresses found in other_address table.");
+            if (!otherAddresses.isEmpty()) {
+                output.put("otherAddresses", otherAddresses.stream()
+                        .map(address -> Map.of(
+                                "soldToAddressRole", address.getSoldToAddressRole(),
+                                "soldToAddressId", address.getSoldToAddressId(),
+                                "networkSiteAddressRole", address.getNetworkSiteAddressRole(),
+                                "networkSiteAddressId", address.getNetworkSiteAddressId(),
+                                "additionalPartnerAddressRole", address.getAdditionalPartnerAddressRole(),
+                                "additionalPartnerAddressId", address.getAdditionalPartnerAddressId()))
+                        .toList());
             } else {
-                otherAddresses.forEach(address -> logger.info(
-                        "SoldToAddressRole: {}, SoldToAddressId: {}, NetworkSiteAddressRole: {}, NetworkSiteAddressId: {}, " +
-                                "AdditionalPartnerAddressRole: {}, AdditionalPartnerAddressId: {}",
-                        address.getSoldToAddressRole(),
-                        address.getSoldToAddressId(),
-                        address.getNetworkSiteAddressRole(),
-                        address.getNetworkSiteAddressId(),
-                        address.getAdditionalPartnerAddressRole(),
-                        address.getAdditionalPartnerAddressId()
-                ));
+                logger.warn("No additional addresses found in other_address table.");
             }
+
+            // Complete the job and send variables back to Zeebe
+            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+            logger.info("Job completed with variables: {}", output);
 
         } catch (Exception e) {
             logger.error("Error processing job", e);
