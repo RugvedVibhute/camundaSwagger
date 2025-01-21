@@ -9,7 +9,7 @@ import jakarta.persistence.Table;
 public class UniWithOrWithoutNtu {
 
     @Id
-    private Long id;
+    private Long srNo;
 
     private String distanceRanges;
     private String ntuRequired;
@@ -23,11 +23,11 @@ public class UniWithOrWithoutNtu {
 
 
     public Long getId() {
-        return id;
+        return srNo;
     }
 
     public void setId(Long id) {
-        this.id = id;
+        this.srNo = id;
     }
 
     public String getDistanceRanges() {
