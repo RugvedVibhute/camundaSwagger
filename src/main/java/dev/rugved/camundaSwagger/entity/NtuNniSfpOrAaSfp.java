@@ -1,5 +1,6 @@
 package dev.rugved.camundaSwagger.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -9,12 +10,34 @@ import jakarta.persistence.Table;
 public class NtuNniSfpOrAaSfp {
 
     @Id
-    private Long srNo;  // Assuming there's a primary key
+    @Column(name = "\"sr_no\"")
+    private Long srNo;
+
+    @Column(name = "\"technology\"")
+    private String technology;
+
+    @Column(name = "\"ntu_nni_sfp\"")
     private String ntuNniSfp;
+
+    @Column(name = "\"aa_sfp\"")
     private String aaSfp;
+
+    @Column(name = "\"ntu_size\"")
     private String ntuSize;
+
+    @Column(name = "\"vendor_type\"")
     private String vendorType;
+
+    @Column(name = "\"distance_ranges\"")
     private String distanceRanges;
+
+    public String getTechnology() {
+        return technology;
+    }
+
+    public void setTechnology(String technology) {
+        this.technology = technology;
+    }
 
     public Long getSrNo() {
         return srNo;

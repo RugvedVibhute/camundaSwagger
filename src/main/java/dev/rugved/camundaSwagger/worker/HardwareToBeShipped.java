@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.rugved.camundaSwagger.entity.SkuId;
 import dev.rugved.camundaSwagger.service.NetworkElementTypeService;
+import dev.rugved.camundaSwagger.service.NtuNniSfpOrAaSfpService;
 import dev.rugved.camundaSwagger.service.SkuIdService;
 import dev.rugved.camundaSwagger.service.UniWithOrWithoutNtuService;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
@@ -27,6 +28,9 @@ public class HardwareToBeShipped {
 
     @Autowired
     private SkuIdService skuIdService;
+
+    @Autowired
+    private NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService;
 
     @JobWorker(type = "HardwareToBeShipped")
     public void hardwareToBeShipped(final JobClient client, final ActivatedJob job) throws JsonProcessingException {
@@ -106,6 +110,22 @@ public class HardwareToBeShipped {
             // Map the distance to database-compatible ranges
             String distanceRanges = mapDistanceToDatabaseValue(distance);
             System.out.println("Mapped Distance Range: " + distanceRanges);
+
+            // Fetch matching data using the new service
+            System.out.println("Mapped ntuSize: " + ntuSize);
+            String ntuNniSfp = ntuNniSfpOrAaSfpService.getNtuNniSfp(ntuSize, distanceRanges, vendorType);
+            if (ntuNniSfp != null) {
+                System.out.println("NTU_NNI_SFP Value: " + ntuNniSfp);
+            } else {
+                System.out.println("No NTU_NNI_SFP value found for the given inputs.");
+            }
+
+            String aaSfp = ntuNniSfpOrAaSfpService.getAaSfp(ntuSize, distanceRanges, vendorType);
+            if (aaSfp != null) {
+                System.out.println("AA_SFP Value: " + aaSfp);
+            } else {
+                System.out.println("No AA_SFP value found for the given inputs.");
+            }
 
             // Call the service to get aaUniSfp once after all necessary values are collected
             String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);

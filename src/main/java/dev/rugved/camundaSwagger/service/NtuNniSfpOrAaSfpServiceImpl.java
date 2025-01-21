@@ -1,11 +1,8 @@
 package dev.rugved.camundaSwagger.service;
 
-import dev.rugved.camundaSwagger.entity.NtuNniSfpOrAaSfp;
 import dev.rugved.camundaSwagger.repository.NtuNniSfpOrAaSfpRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class NtuNniSfpOrAaSfpServiceImpl implements NtuNniSfpOrAaSfpService {
@@ -14,8 +11,20 @@ public class NtuNniSfpOrAaSfpServiceImpl implements NtuNniSfpOrAaSfpService {
     private NtuNniSfpOrAaSfpRepository repository;
 
     @Override
-    public List<NtuNniSfpOrAaSfp> getMatchingData(String ntuSize, String distanceRanges, String vendorType) {
-        return repository.findMatchingData(ntuSize, distanceRanges, vendorType);
+    public String getNtuNniSfp(String ntuSize, String distanceRanges, String vendorType) {
+        System.out.println("service ntuSize: " + ntuSize);
+        System.out.println("service distanceRanges: " + distanceRanges);
+        System.out.println("service vendorType: " + vendorType);
+        return repository.findNtuNniSfp(ntuSize, distanceRanges, vendorType);
+    }
+
+    @Override
+    public String getAaSfp(String ntuSize, String distanceRanges, String vendorType) {
+        System.out.println("service ntuSize: " + ntuSize);
+        System.out.println("service distanceRanges: " + distanceRanges);
+        System.out.println("service vendorType: " + vendorType);
+        return repository.findAaSfp(ntuSize, distanceRanges, vendorType);
     }
 }
+
 
