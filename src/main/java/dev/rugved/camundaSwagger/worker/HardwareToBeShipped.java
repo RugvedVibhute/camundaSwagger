@@ -3,11 +3,9 @@ package dev.rugved.camundaSwagger.worker;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.rugved.camundaSwagger.entity.NtuType;
 import dev.rugved.camundaSwagger.entity.SkuId;
-import dev.rugved.camundaSwagger.service.NetworkElementTypeService;
-import dev.rugved.camundaSwagger.service.NtuNniSfpOrAaSfpService;
-import dev.rugved.camundaSwagger.service.SkuIdService;
-import dev.rugved.camundaSwagger.service.UniWithOrWithoutNtuService;
+import dev.rugved.camundaSwagger.service.*;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -32,10 +30,14 @@ public class HardwareToBeShipped {
     @Autowired
     private NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService;
 
-    @JobWorker(type = "HardwareToBeShipped")
+    @Autowired
+    private NtuTypeService ntuTypeService;
+
+    @JobWorker(type = "HardwareToBeShipped", tenantIds = "Infosys")
     public void hardwareToBeShipped(final JobClient client, final ActivatedJob job) throws JsonProcessingException {
 
         // Fetch the variables from the job
+
         String var = job.getVariables();
         System.out.println("Job Variables: " + var);
 
@@ -94,6 +96,17 @@ public class HardwareToBeShipped {
         if (networkElement == null) {
             System.out.println("Network Element not found, unable to determine vendorType.");
             return;
+        }
+
+        if (ntuSize != null) {
+            try {
+                NtuType ntuType = ntuTypeService.getNtuTypeBySize(ntuSize);
+                System.out.println("Fetched NTU Type: " + ntuType.getNtuType());
+            } catch (IllegalArgumentException e) {
+                System.out.println(e.getMessage());
+            }
+        } else {
+            System.out.println("NTU Size is not available in the job variables.");
         }
 
         // Fetch vendorType using the networkElement
