@@ -66,6 +66,8 @@ public class ShipToAddressWorker {
                 logger.warn("No Ship To Address found for state: {}", stateOrProvince);
             }
 
+            output.put("stateOrProvince", stateOrProvince);
+
             if (!otherAddresses.isEmpty()) {
                 output.put("otherAddresses", otherAddresses.stream()
                         .map(address -> Map.of(

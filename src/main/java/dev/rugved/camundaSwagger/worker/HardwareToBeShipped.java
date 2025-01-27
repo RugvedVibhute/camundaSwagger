@@ -160,6 +160,8 @@ public class HardwareToBeShipped {
             Map<String, Object> output = new HashMap<>();
             output.put("aaUniSfp", aaUniSfp);
             output.put("skuId", skuIdValue);
+            output.put("ntuRequired", ntuRequired);
+            output.put("ntuNniSfp", ntuNniSfp);
 
             // Complete the job
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
