@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:modeler="http://camunda.org/schema/modeler/1.0" id="Definitions_0o4e704" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="5.28.0" modeler:executionPlatform="Camunda Cloud" modeler:executionPlatformVersion="8.6.0">
+  <bpmn:process id="HardwareShipment" name="HardwareShipment" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_0sw2ru0</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_0sw2ru0" sourceRef="StartEvent_1" targetRef="Activity_09rwf0n" />
+    <bpmn:sequenceFlow id="Flow_1wrzrvs" sourceRef="Activity_1wv2fjx" targetRef="Gateway_0ahsnlr" />
+    <bpmn:endEvent id="Event_0scqbs0">
+      <bpmn:incoming>Flow_03yzuvf</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_0mfr777" sourceRef="Gateway_0f09oii" targetRef="Activity_1wv2fjx" />
+    <bpmn:parallelGateway id="Gateway_0f09oii">
+      <bpmn:incoming>Flow_0he51ct</bpmn:incoming>
+      <bpmn:outgoing>Flow_0mfr777</bpmn:outgoing>
+      <bpmn:outgoing>Flow_0antxj8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_06htraa</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_10i6h6s" sourceRef="Gateway_0ahsnlr" targetRef="Activity_14sziuv" />
+    <bpmn:parallelGateway id="Gateway_0ahsnlr">
+      <bpmn:incoming>Flow_1wrzrvs</bpmn:incoming>
+      <bpmn:incoming>Flow_1yisxse</bpmn:incoming>
+      <bpmn:incoming>Flow_08ri6ob</bpmn:incoming>
+      <bpmn:outgoing>Flow_10i6h6s</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:sequenceFlow id="Flow_0antxj8" sourceRef="Gateway_0f09oii" targetRef="Activity_1xd537c" />
+    <bpmn:sequenceFlow id="Flow_1yisxse" sourceRef="Activity_1xd537c" targetRef="Gateway_0ahsnlr" />
+    <bpmn:serviceTask id="Activity_1xd537c" name="shipToAddress">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="shipToAddress" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0antxj8</bpmn:incoming>
+      <bpmn:outgoing>Flow_1yisxse</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_06htraa" sourceRef="Gateway_0f09oii" targetRef="Activity_0kdzwsk" />
+    <bpmn:sequenceFlow id="Flow_08ri6ob" sourceRef="Activity_0kdzwsk" targetRef="Gateway_0ahsnlr" />
+    <bpmn:serviceTask id="Activity_0kdzwsk" name="fetchWBSDetails">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="fetchWBSDetails" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_06htraa</bpmn:incoming>
+      <bpmn:outgoing>Flow_08ri6ob</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Activity_1wv2fjx" name="Hardware to be shipped">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="HardwareToBeShipped" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0mfr777</bpmn:incoming>
+      <bpmn:outgoing>Flow_1wrzrvs</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_0wz0r7m" sourceRef="Activity_09rwf0n" targetRef="Gateway_1h9qznn" />
+    <bpmn:serviceTask id="Activity_09rwf0n" name="InstallationMethod">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="InstallationMethod" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_0sw2ru0</bpmn:incoming>
+      <bpmn:outgoing>Flow_0wz0r7m</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gateway_1h9qznn" default="Flow_0he51ct">
+      <bpmn:incoming>Flow_0wz0r7m</bpmn:incoming>
+      <bpmn:outgoing>Flow_0he51ct</bpmn:outgoing>
+      <bpmn:outgoing>Flow_1md46v0</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_0he51ct" sourceRef="Gateway_1h9qznn" targetRef="Gateway_0f09oii" />
+    <bpmn:exclusiveGateway id="Gateway_1dejskc">
+      <bpmn:incoming>Flow_1md46v0</bpmn:incoming>
+      <bpmn:incoming>Flow_1pk4p1i</bpmn:incoming>
+      <bpmn:outgoing>Flow_03yzuvf</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="Flow_03yzuvf" sourceRef="Gateway_1dejskc" targetRef="Event_0scqbs0" />
+    <bpmn:sequenceFlow id="Flow_1md46v0" sourceRef="Gateway_1h9qznn" targetRef="Gateway_1dejskc">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=InstallationMethod = "Self Install"</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_1pk4p1i" sourceRef="Activity_14sziuv" targetRef="Gateway_1dejskc" />
+    <bpmn:scriptTask id="Activity_14sziuv">
+      <bpmn:extensionElements>
+        <zeebe:script expression="=if hydration = true then &#10;(if ntuRequired = &#34;Yes&#34; then {&#10;        &#34;placeTo&#34;: placeTo,&#10;        &#34;relatedParty&#34;: [&#10;            relatedParty[1],&#10;            relatedParty[2],&#10;        {&#10;            &#34;id&#34;: otherAddresses.soldToAddressId[1],&#10;            &#34;role&#34;: otherAddresses.soldToAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;soldToAddress&#34;&#10;        },&#10;        {&#10;            &#34;id&#34;: shipToAddresses.shipToAddressId[1],&#10;            &#34;role&#34;: shipToAddresses.shipToAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;shipToAddress&#34;&#10;        },&#10;        {&#10;            &#34;id&#34;: otherAddresses.networkSiteAddressId[1],&#10;            &#34;role&#34;: otherAddresses.networkSiteAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;networkSiteAddress&#34;&#10;        },&#10;        {&#10;            &#34;id&#34;: otherAddresses.additionalPartnerAddressId[1],&#10;            &#34;role&#34;: otherAddresses.additionalPartnerAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;additionalPartnerAddress&#34;&#10;        }&#10;        ],&#10;        &#34;shippingOrderCharacteristic&#34;: [&#10;            shippingOrderCharacteristic[1],&#10;            shippingOrderCharacteristic[2],&#10;            shippingOrderCharacteristic[3],&#10;            shippingOrderCharacteristic[4],&#10;          {&#10;            &#34;name&#34;: &#34;WBSHeader&#34;,&#10;            &#34;value&#34;: &#34;P&#34;+ replace(wbsHeader, stateOrProvince, &#34;&#34;),&#10;            &#34;valueType&#34;: &#34;String&#34;&#10;        }&#10;        ],&#10;        &#34;shippingOrderItem&#34;: [&#10;            {&#10;                &#34;id&#34;: shippingOrderItem.id[1],&#10;                &#34;quantity&#34;: shippingOrderItem.quantity[1],&#10;                &#34;action&#34;: shippingOrderItem.action[1],&#10;                &#34;productOrderItem&#34;: {&#10;                    &#34;productOrderId&#34;: shippingOrderItem[1].productOrderItem.productOrderId&#10;                },&#10;                &#34;shipment&#34;: {&#10;                &#34;shipmentItem&#34;: [&#10;                    {&#10;                        &#34;product&#34;: {&#10;                            &#34;productCharacteristic&#34;: [                               shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[1],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[2],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[3],&#10;                                {&#10;                                    &#34;name&#34;: &#34;NTU Type&#34;,&#10;                                    &#34;value&#34;: ntuType,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;NTU NNI SFP&#34;,&#10;                                    &#34;value&#34;: ntuNniSfp,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;AA SFP&#34;,&#10;                                    &#34;value&#34;: aaSfp,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;NTU Type SKU ID&#34;,&#10;                                    &#34;value&#34;: ntuTypeSkuId,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;NTU NNI SFP SKU ID&#34;,&#10;                                    &#34;value&#34;: ntuNniSfpSkuId,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;AA SFP SKU ID&#34;,&#10;                                    &#34;value&#34;: aaSfpSkuId,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                }&#10;                            ],&#10;                            &#34;productSpecification&#34;: {&#10;                                &#34;id&#34;: shippingOrderItem[1].shipment.shipmentItem[1].product.productSpecification.id,&#10;                                &#34;name&#34;: shippingOrderItem[1].shipment.shipmentItem[1].product.productSpecification.name&#10;                            }&#10;                        }&#10;                    }&#10;                ]&#10;            }&#10;            },&#10;            {&#10;                &#34;id&#34;: shippingOrderItem.id[2],&#10;                &#34;quantity&#34;: shippingOrderItem.quantity[2],&#10;                &#34;action&#34;: shippingOrderItem.action[2],&#10;                &#34;productOrderItem&#34;: {&#10;                    &#34;productOrderId&#34;: shippingOrderItem[2].productOrderItem.productOrderId&#10;                },&#10;                &#34;shipment&#34;: {&#10;                    &#34;shipmentItem&#34;: [&#10;                        {&#10;                            &#34;product&#34;: {&#10;                                &#34;productCharacteristic&#34;: [&#10;                                    shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[1],&#10;shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[2],&#10;shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[3],        shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[4],&#10;shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[5],&#10;shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[6],&#10;shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[7],&#10;shippingOrderItem[2].shipment.shipmentItem[1].product.productCharacteristic[8],&#10;                                {&#10;                                    &#34;name&#34;: &#34;UNI SFP&#34;,&#10;                                    &#34;value&#34;: aaUniSfp,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;UNI SFP SKU ID&#34;,&#10;                                    &#34;value&#34;: skuId,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                }&#10;                                ],&#10;                                &#34;productSpecification&#34;: {&#10;                                    &#34;id&#34;: shippingOrderItem[2].shipment.shipmentItem[1].product.productSpecification.id,&#10;                                    &#34;name&#34;: shippingOrderItem[2].shipment.shipmentItem[1].product.productSpecification.name&#10;                                }&#10;                            }&#10;                        }&#10;                    ]&#10;                }&#10;            }&#10;        ],&#10;        &#34;productOrder&#34;: productOrder&#10;    } else {&#10;    &#34;placeTo&#34;: placeTo,&#10;    &#34;relatedParty&#34;: [&#10;            relatedParty[1],&#10;            relatedParty[2],&#10;        {&#10;            &#34;id&#34;: otherAddresses.soldToAddressId[1],&#10;            &#34;role&#34;: otherAddresses.soldToAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;soldToAddress&#34;&#10;        },&#10;        {&#10;            &#34;id&#34;: shipToAddresses.shipToAddressId[1],&#10;            &#34;role&#34;: shipToAddresses.shipToAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;shipToAddress&#34;&#10;        },&#10;        {&#10;            &#34;id&#34;: otherAddresses.networkSiteAddressId[1],&#10;            &#34;role&#34;: otherAddresses.networkSiteAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;networkSiteAddress&#34;&#10;        },&#10;        {&#10;            &#34;id&#34;: otherAddresses.additionalPartnerAddressId[1],&#10;            &#34;role&#34;: otherAddresses.additionalPartnerAddressRole[1],&#10;            &#34;@referredType&#34;: &#34;additionalPartnerAddress&#34;&#10;        }&#10;    ],&#10;    &#34;shippingOrderCharacteristic&#34;: [&#10;        shippingOrderCharacteristic[1],&#10;        shippingOrderCharacteristic[2],&#10;        shippingOrderCharacteristic[3],&#10;        shippingOrderCharacteristic[4],&#10;        {&#10;            &#34;name&#34;: &#34;WBSHeader&#34;,&#10;            &#34;value&#34;: &#34;P&#34;+ replace(wbsHeader, stateOrProvince, &#34;&#34;),&#10;            &#34;valueType&#34;: &#34;String&#34;&#10;        }&#10;    ],&#10;    &#34;shippingOrderItem&#34;: [&#10;        {&#10;            &#34;id&#34;: shippingOrderItem.id[1],&#10;            &#34;quantity&#34;: shippingOrderItem.quantity[1],&#10;            &#34;action&#34;: shippingOrderItem.action[1],&#10;            &#34;productOrderItem&#34;: {&#10;                &#34;productOrderId&#34;: shippingOrderItem[1].productOrderItem.productOrderId&#10;            },&#10;            &#34;shipment&#34;: {&#10;                &#34;shipmentItem&#34;: [&#10;                    {&#10;                        &#34;product&#34;: {&#10;                            &#34;productCharacteristic&#34;: [&#10;                                shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[1],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[2],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[3],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[4],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[5],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[6],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[7],&#10;shippingOrderItem[1].shipment.shipmentItem[1].product.productCharacteristic[8],&#10;                                {&#10;                                    &#34;name&#34;: &#34;AA UNI SFP&#34;,&#10;                                    &#34;value&#34;: aaUniSfp,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                },&#10;                                {&#10;                                    &#34;name&#34;: &#34;AA UNI SFP SKU ID&#34;,&#10;                                    &#34;value&#34;: skuId,&#10;                                    &#34;valueType&#34;: &#34;String&#34;&#10;                                }&#10;                            ],&#10;                            &#34;productSpecification&#34;: {&#10;                                &#34;id&#34;: shippingOrderItem[1].shipment.shipmentItem[1].product.productSpecification.id,&#10;                                &#34;name&#34;: shippingOrderItem[1].shipment.shipmentItem[1].product.productSpecification.name&#10;                            }&#10;                        }&#10;                    }&#10;                ]&#10;            }&#10;        }&#10;    ],&#10;    &#34;productOrder&#34;: productOrder&#10;} ) else&#10;{&#34;message&#34;: &#34;Data is not avialable in look up tables&#34;}" resultVariable="CamundaResponse" />
+      </bpmn:extensionElements>
+      <bpmn:incoming>Flow_10i6h6s</bpmn:incoming>
+      <bpmn:outgoing>Flow_1pk4p1i</bpmn:outgoing>
+    </bpmn:scriptTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="HardwareShipment">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="179" y="219" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1u0h6z0_di" bpmnElement="Gateway_0f09oii">
+        <dc:Bounds x="625" y="212" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_0fgva4e_di" bpmnElement="Gateway_0ahsnlr">
+        <dc:Bounds x="925" y="212" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0h90ps1_di" bpmnElement="Activity_1xd537c">
+        <dc:Bounds x="760" y="197" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0bog090_di" bpmnElement="Activity_0kdzwsk">
+        <dc:Bounds x="760" y="307" width="100" height="80" />
+        <bpmndi:BPMNLabel />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_17nns3u_di" bpmnElement="Activity_1wv2fjx">
+        <dc:Bounds x="760" y="84" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_15t4o06_di" bpmnElement="Activity_09rwf0n">
+        <dc:Bounds x="310" y="197" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1h9qznn_di" bpmnElement="Gateway_1h9qznn" isMarkerVisible="true">
+        <dc:Bounds x="485" y="212" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0scqbs0_di" bpmnElement="Event_0scqbs0">
+        <dc:Bounds x="1372" y="219" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_1dejskc_di" bpmnElement="Gateway_1dejskc" isMarkerVisible="true">
+        <dc:Bounds x="1265" y="212" width="50" height="50" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Activity_0vk6hws_di" bpmnElement="Activity_14sziuv">
+        <dc:Bounds x="1090" y="197" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_0sw2ru0_di" bpmnElement="Flow_0sw2ru0">
+        <di:waypoint x="215" y="237" />
+        <di:waypoint x="310" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1wrzrvs_di" bpmnElement="Flow_1wrzrvs">
+        <di:waypoint x="860" y="124" />
+        <di:waypoint x="950" y="124" />
+        <di:waypoint x="950" y="212" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0mfr777_di" bpmnElement="Flow_0mfr777">
+        <di:waypoint x="650" y="212" />
+        <di:waypoint x="650" y="124" />
+        <di:waypoint x="760" y="124" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10i6h6s_di" bpmnElement="Flow_10i6h6s">
+        <di:waypoint x="975" y="237" />
+        <di:waypoint x="1090" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0antxj8_di" bpmnElement="Flow_0antxj8">
+        <di:waypoint x="675" y="237" />
+        <di:waypoint x="760" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1yisxse_di" bpmnElement="Flow_1yisxse">
+        <di:waypoint x="860" y="237" />
+        <di:waypoint x="925" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_06htraa_di" bpmnElement="Flow_06htraa">
+        <di:waypoint x="650" y="262" />
+        <di:waypoint x="650" y="347" />
+        <di:waypoint x="760" y="347" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_08ri6ob_di" bpmnElement="Flow_08ri6ob">
+        <di:waypoint x="860" y="347" />
+        <di:waypoint x="950" y="347" />
+        <di:waypoint x="950" y="262" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0wz0r7m_di" bpmnElement="Flow_0wz0r7m">
+        <di:waypoint x="410" y="237" />
+        <di:waypoint x="485" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_0he51ct_di" bpmnElement="Flow_0he51ct">
+        <di:waypoint x="535" y="237" />
+        <di:waypoint x="625" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_03yzuvf_di" bpmnElement="Flow_03yzuvf">
+        <di:waypoint x="1315" y="237" />
+        <di:waypoint x="1372" y="237" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1md46v0_di" bpmnElement="Flow_1md46v0">
+        <di:waypoint x="510" y="262" />
+        <di:waypoint x="510" y="450" />
+        <di:waypoint x="1290" y="450" />
+        <di:waypoint x="1290" y="262" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_1pk4p1i_di" bpmnElement="Flow_1pk4p1i">
+        <di:waypoint x="1190" y="237" />
+        <di:waypoint x="1265" y="237" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

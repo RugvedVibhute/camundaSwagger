@@ -106,6 +106,8 @@ public class HardwareToBeShipped {
 
             output.put("aaUniSfp", aaUniSfp);
             output.put("skuId", skuIdValue);
+            output.put("ntuRequired", ntuRequired);
+
         } else if ("Yes".equalsIgnoreCase(ntuRequired)) {
             String ntuTypeValue = null, ntuTypeSkuIdValue = null, ntuNniSfp = null;
             String ntuNniSfpSkuIdValue = null, aaSfp = null, aaSfpSkuIdValue = null, aaUniSfp = null, skuIdValue = null;
@@ -157,6 +159,7 @@ public class HardwareToBeShipped {
             output.put("aaSfpSkuId", aaSfpSkuIdValue);
             output.put("aaUniSfp", aaUniSfp);
             output.put("skuId", skuIdValue);
+            output.put("ntuRequired", ntuRequired);
         }
 
         output.put("hydration", hydration);
