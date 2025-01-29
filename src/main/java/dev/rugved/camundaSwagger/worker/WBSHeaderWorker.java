@@ -60,12 +60,15 @@ public class WBSHeaderWorker {
             output.put("customerType", wbsHeaderDetails.getCustomerType());
             output.put("customerSubType", wbsHeaderDetails.getCustomerSubType());
 
-            // Complete the job and send variables back to Zeebe
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
             logger.info("Job completed with variables: {}", output);
 
         } catch (Exception e) {
-            logger.error("Error processing fetchWBSDetails job", e);
-        }
+        logger.error("Error processing fetchWBSDetails job", e);
+        Map<String, Object> output = new HashMap<>();
+        output.put("errorMessage", " " + e.getMessage());
+
+        client.newCompleteCommand(job.getKey()).variables(output).send().join();
+    }
     }
 }

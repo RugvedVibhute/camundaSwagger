@@ -35,7 +35,6 @@ public class HardwareToBeShipped {
 
     @JobWorker(type = "HardwareToBeShipped", tenantIds = "Infosys")
     public void hardwareToBeShipped(final JobClient client, final ActivatedJob job) throws JsonProcessingException {
-
         // Fetch the variables from the job
         String var = job.getVariables();
         System.out.println("Job Variables: " + var);
@@ -44,8 +43,8 @@ public class HardwareToBeShipped {
         JsonNode rootNode = objectMapper.readTree(var);
 
         // Initialize variables
-        String networkElement = null;
-        String distance = null, ntuRequired = null, ntuSize = null, uniPortCapacity = null, uniInterfaceType = null;
+        String networkElement = null, distance = null, ntuRequired = null, ntuSize = null;
+        String uniPortCapacity = null, uniInterfaceType = null;
 
         // Extract variables from JSON
         JsonNode shippingOrderItems = rootNode.path("shippingOrderItem");
@@ -64,24 +63,12 @@ public class HardwareToBeShipped {
                             String value = characteristic.path("value").asText();
 
                             switch (name) {
-                                case "networkElement":
-                                    networkElement = value;
-                                    break;
-                                case "distance":
-                                    distance = value;
-                                    break;
-                                case "NTURequired":
-                                    ntuRequired = value;
-                                    break;
-                                case "ntuSize":
-                                    ntuSize = value;
-                                    break;
-                                case "UNIPortCapacity":
-                                    uniPortCapacity = value;
-                                    break;
-                                case "InterfaceType":
-                                    uniInterfaceType = value;
-                                    break;
+                                case "networkElement": networkElement = value; break;
+                                case "distance": distance = value; break;
+                                case "NTURequired": ntuRequired = value; break;
+                                case "ntuSize": ntuSize = value; break;
+                                case "UNIPortCapacity": uniPortCapacity = value; break;
+                                case "InterfaceType": uniInterfaceType = value; break;
                             }
                         }
                     }
@@ -90,81 +77,113 @@ public class HardwareToBeShipped {
         }
 
         Map<String, Object> output = new HashMap<>();
-        boolean hydration = false; // Default to false unless data is retrieved
 
-        if ("No".equalsIgnoreCase(ntuRequired)) {
-            String distanceRanges = mapDistanceToDatabaseValue(distance);
-            String vendorType = networkElement != null ? service.getVendorType(networkElement) : null;
-
-            String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, "0", vendorType, uniPortCapacity, uniInterfaceType);
-            String skuIdValue = null;
-            if (aaUniSfp != null) {
-                SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
-                skuIdValue = skuId != null ? skuId.getAaUniSfpSkuId() : null;
-                hydration = true; // Data retrieved successfully
-            }
-
-            output.put("aaUniSfp", aaUniSfp);
-            output.put("skuId", skuIdValue);
-            output.put("ntuRequired", ntuRequired);
-
-        } else if ("Yes".equalsIgnoreCase(ntuRequired)) {
-            String ntuTypeValue = null, ntuTypeSkuIdValue = null, ntuNniSfp = null;
-            String ntuNniSfpSkuIdValue = null, aaSfp = null, aaSfpSkuIdValue = null, aaUniSfp = null, skuIdValue = null;
-
-            if (ntuSize != null) {
-                try {
-                    NtuType ntuType = ntuTypeService.getNtuTypeBySize(ntuSize);
-                    ntuTypeValue = ntuType.getNtuType();
-
-                    SkuId ntuTypeSkuId = skuIdService.getSkuIdByAaUniSfp(ntuTypeValue);
-                    ntuTypeSkuIdValue = ntuTypeSkuId != null ? ntuTypeSkuId.getAaUniSfpSkuId() : null;
-
-                    hydration = true; // Data retrieved successfully
-                } catch (IllegalArgumentException e) {
-                    System.out.println("Error fetching NTU Type or SKU ID: " + e.getMessage());
-                }
-            }
-
-            String vendorType = service.getVendorType(networkElement);
-
-            if (distance != null && ntuSize != null && uniPortCapacity != null && uniInterfaceType != null) {
+        try {
+            if ("No".equalsIgnoreCase(ntuRequired)) {
                 String distanceRanges = mapDistanceToDatabaseValue(distance);
+                String vendorType = (networkElement != null) ? service.getVendorType(networkElement) : null;
 
-                ntuNniSfp = ntuNniSfpOrAaSfpService.getNtuNniSfp(ntuSize, distanceRanges, vendorType);
-
-                SkuId ntuNniSfpSkuId = skuIdService.getSkuIdByAaUniSfp(ntuNniSfp);
-                ntuNniSfpSkuIdValue = ntuNniSfpSkuId != null ? ntuNniSfpSkuId.getAaUniSfpSkuId() : null;
-
-                aaSfp = ntuNniSfpOrAaSfpService.getAaSfp(ntuSize, distanceRanges, vendorType);
-
-                SkuId aaSfpSkuId = skuIdService.getSkuIdByAaUniSfp(aaSfp);
-                aaSfpSkuIdValue = aaSfpSkuId != null ? aaSfpSkuId.getAaUniSfpSkuId() : null;
-
-                aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);
-
-                if (aaUniSfp != null) {
-                    SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
-                    skuIdValue = skuId != null ? skuId.getAaUniSfpSkuId() : null;
+                if (vendorType == null ) {
+                    throw new IllegalArgumentException("No Vendor Type found for networkElement :" +networkElement);
                 }
 
-                hydration = true; // Data retrieved successfully
+                String skuIdValue = null;
+
+                String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, "0", vendorType, uniPortCapacity, uniInterfaceType);
+
+                if (aaUniSfp == null ) {
+                    throw new IllegalArgumentException("No aaUniSfp found for :" +distanceRanges +", ntuSize: "+"0" + ", vendorType: " +vendorType + ", uniPortCapacity: " +uniPortCapacity +", uniInterfaceType: " +uniInterfaceType);
+                }
+
+                SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
+
+                skuIdValue =  skuId.getAaUniSfpSkuId();
+
+                if(skuIdValue == null){
+                    throw new IllegalArgumentException("No skuId found for aaUniSfp :" +aaUniSfp);
+                }
+
+                output.put("aaUniSfp", aaUniSfp);
+                output.put("skuId", skuIdValue);
+                output.put("ntuRequired", ntuRequired);
+
+            } else if ("Yes".equalsIgnoreCase(ntuRequired)) {
+                String ntuTypeValue = null, ntuTypeSkuIdValue = null, ntuNniSfp = null;
+                String ntuNniSfpSkuIdValue = null, aaSfp = null, aaSfpSkuIdValue = null, aaUniSfp = null, skuIdValue = null;
+
+                if (ntuSize != null) {
+                    NtuType ntuType = ntuTypeService.getNtuTypeBySize(ntuSize);
+                    if (ntuType == null) {
+                        throw new IllegalArgumentException("No NTU Type found for size: " + ntuSize);
+                    }
+
+                    ntuTypeValue = ntuType.getNtuType();
+                    SkuId ntuTypeSkuId = skuIdService.getSkuIdByAaUniSfp(ntuTypeValue);
+                    ntuTypeSkuIdValue = ntuTypeSkuId.getAaUniSfpSkuId();
+                    if (ntuTypeSkuIdValue == null) {
+                        throw new IllegalArgumentException("No ntuTypeSkuIdValue found for ntuTypeValue : " + ntuTypeValue);
+                    }
+                }
+
+                String vendorType = service.getVendorType(networkElement);
+                if (distance != null && ntuSize != null && uniPortCapacity != null && uniInterfaceType != null) {
+                    String distanceRanges = mapDistanceToDatabaseValue(distance);
+
+                    ntuNniSfp = ntuNniSfpOrAaSfpService.getNtuNniSfp(ntuSize, distanceRanges, vendorType);
+
+                    if (ntuNniSfp == null) {
+                        throw new IllegalArgumentException("No ntuNniSfp found for ntuNniSfp : " + ntuNniSfp +", distanceRanges: "+ distanceRanges + ", vendorType: "+ vendorType);
+                    }
+
+                    SkuId ntuNniSfpSkuId = skuIdService.getSkuIdByAaUniSfp(ntuNniSfp);
+                    ntuNniSfpSkuIdValue = ntuNniSfpSkuId.getAaUniSfpSkuId();
+
+                    if (ntuNniSfpSkuIdValue == null) {
+                        throw new IllegalArgumentException("No ntuNniSfpSkuId found for ntuNniSfp : " + ntuNniSfp);
+                    }
+
+                    aaSfp = ntuNniSfpOrAaSfpService.getAaSfp(ntuSize, distanceRanges, vendorType);
+                    SkuId aaSfpSkuId = skuIdService.getSkuIdByAaUniSfp(aaSfp);
+                    aaSfpSkuIdValue = aaSfpSkuId.getAaUniSfpSkuId();
+
+                    if (aaSfpSkuIdValue == null) {
+                        throw new IllegalArgumentException("No ntuNniSfpSkuId found for ntuNniSfp : " + ntuNniSfp);
+                    }
+
+                    aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);
+                    if (aaUniSfp != null) {
+                        SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
+                        skuIdValue = skuId.getAaUniSfpSkuId();
+                        if (skuIdValue == null) {
+                            throw new IllegalArgumentException("No skuId found for aaUniSfp : " + aaUniSfp);
+                        }
+                    }
+                }
+
+                output.put("ntuType", ntuTypeValue);
+                output.put("ntuTypeSkuId", ntuTypeSkuIdValue);
+                output.put("ntuNniSfp", ntuNniSfp);
+                output.put("ntuNniSfpSkuId", ntuNniSfpSkuIdValue);
+                output.put("aaSfp", aaSfp);
+                output.put("aaSfpSkuId", aaSfpSkuIdValue);
+                output.put("aaUniSfp", aaUniSfp);
+                output.put("skuId", skuIdValue);
+                output.put("ntuRequired", ntuRequired);
             }
 
-            output.put("ntuType", ntuTypeValue);
-            output.put("ntuTypeSkuId", ntuTypeSkuIdValue);
-            output.put("ntuNniSfp", ntuNniSfp);
-            output.put("ntuNniSfpSkuId", ntuNniSfpSkuIdValue);
-            output.put("aaSfp", aaSfp);
-            output.put("aaSfpSkuId", aaSfpSkuIdValue);
-            output.put("aaUniSfp", aaUniSfp);
-            output.put("skuId", skuIdValue);
-            output.put("ntuRequired", ntuRequired);
-        }
+            output.put("errorMessage", null);
+            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+            System.out.println("Job completed with variables: " + output);
 
-        output.put("hydration", hydration);
-        client.newCompleteCommand(job.getKey()).variables(output).send().join();
-        System.out.println("Job completed with variables: " + output);
+        } catch (Exception e) {
+            System.err.println("Error processing HardwareToBeShipped: " + e.getMessage());
+
+            // Return error variables instead of stopping the BPMN process
+            output.clear();
+            output.put("errorMessage", " " + e.getMessage());
+
+            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+        }
     }
 
     private String mapDistanceToDatabaseValue(String distance) {
@@ -177,12 +196,15 @@ public class HardwareToBeShipped {
                 return "distance_ranges = '< 300' OR distance_ranges = '< 500' OR distance_ranges = '<10000'";
             } else if (numericDistance >= 300 && numericDistance < 500) {
                 return "distance_ranges = '< 500' OR distance_ranges = '<10000'";
-            } else {
+            } else if (numericDistance < 10000) {
                 return "distance_ranges = '<10000'";
+            } else {
+                return "distance_ranges = 'incorrect distance value'";
             }
         } catch (NumberFormatException e) {
             System.out.println("Invalid distance value: " + distance);
             return null;
         }
     }
+
 }
