@@ -8,3 +8,6 @@ queries:
   ntuNniSfpOrAaSfp:
     findNtuNniSfp: "SELECT n.ntuNniSfp FROM NtuNniSfpOrAaSfp n WHERE n.ntuSize = :ntuSize AND :distanceRanges LIKE CONCAT('%', n.distanceRanges, '%') AND n.vendorType LIKE :vendorType"
     findAaSfp: "SELECT n.aaSfp FROM NtuNniSfpOrAaSfp n WHERE n.ntuSize = :ntuSize AND :distanceRanges LIKE CONCAT('%', n.distanceRanges, '%') AND n.vendorType LIKE :vendorType"
+
+  ntuType:
+    findByNtuSize: "SELECT n FROM NtuType n WHERE n.ntuSize = :ntuSize"
