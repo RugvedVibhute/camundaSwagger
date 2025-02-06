@@ -7,8 +7,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class NtuNniSfpOrAaSfpServiceImpl implements NtuNniSfpOrAaSfpService {
 
+    private final NtuNniSfpOrAaSfpRepository repository;
+
     @Autowired
-    private NtuNniSfpOrAaSfpRepository repository;
+    public NtuNniSfpOrAaSfpServiceImpl(NtuNniSfpOrAaSfpRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public String getNtuNniSfp(String ntuSize, String distanceRanges, String vendorType) {
@@ -26,5 +30,3 @@ public class NtuNniSfpOrAaSfpServiceImpl implements NtuNniSfpOrAaSfpService {
         return repository.findAaSfp(ntuSize, distanceRanges, vendorType);
     }
 }
-
-

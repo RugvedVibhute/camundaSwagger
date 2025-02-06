@@ -10,7 +10,8 @@ import java.util.Map;
 public class QueryConfig {
 
     private Map<String, String> wbsHeader;
-    private Map<String, String> networkElementType; // Add this
+    private Map<String, String> networkElementType;
+    private Map<String, String> ntuNniSfpOrAaSfp;
 
     public Map<String, String> getWbsHeader() {
         return wbsHeader;
@@ -20,11 +21,19 @@ public class QueryConfig {
         this.wbsHeader = wbsHeader;
     }
 
-    public Map<String, String> getNetworkElementType() { // Add this getter
+    public Map<String, String> getNetworkElementType() {
         return networkElementType;
     }
 
-    public void setNetworkElementType(Map<String, String> networkElementType) { // Add this setter
+    public void setNetworkElementType(Map<String, String> networkElementType) {
         this.networkElementType = networkElementType;
+    }
+
+    public Map<String, String> getNtuNniSfpOrAaSfp() { // Add this getter
+        return ntuNniSfpOrAaSfp;
+    }
+
+    public void setNtuNniSfpOrAaSfp(Map<String, String> ntuNniSfpOrAaSfp) { // Add this setter
+        this.ntuNniSfpOrAaSfp = ntuNniSfpOrAaSfp;
     }
 }

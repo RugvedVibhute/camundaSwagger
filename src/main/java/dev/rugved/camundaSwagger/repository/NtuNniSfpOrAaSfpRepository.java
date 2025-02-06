@@ -1,25 +1,44 @@
 package dev.rugved.camundaSwagger.repository;
 
-import dev.rugved.camundaSwagger.entity.NtuNniSfpOrAaSfp;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import dev.rugved.camundaSwagger.config.QueryConfig;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface NtuNniSfpOrAaSfpRepository extends JpaRepository<NtuNniSfpOrAaSfp, Long> {
+public class NtuNniSfpOrAaSfpRepository {
 
-    @Query("SELECT n.ntuNniSfp FROM NtuNniSfpOrAaSfp n WHERE n.ntuSize = :ntuSize " +
-            "AND :distanceRanges LIKE CONCAT('%', n.distanceRanges, '%') " +
-            "AND n.vendorType LIKE %:vendorType%")
-    String findNtuNniSfp(@Param("ntuSize") String ntuSize,
-                         @Param("distanceRanges") String distanceRanges,
-                         @Param("vendorType") String vendorType);
+    @PersistenceContext
+    private EntityManager entityManager;
 
-    @Query("SELECT n.aaSfp FROM NtuNniSfpOrAaSfp n WHERE n.ntuSize = :ntuSize " +
-            "AND :distanceRanges LIKE CONCAT('%', n.distanceRanges, '%') " +
-            "AND n.vendorType LIKE %:vendorType%")
-    String findAaSfp(@Param("ntuSize") String ntuSize,
-                     @Param("distanceRanges") String distanceRanges,
-                     @Param("vendorType") String vendorType);
+    private final QueryConfig queryConfig;
+
+    @Autowired
+    public NtuNniSfpOrAaSfpRepository(QueryConfig queryConfig) {
+        this.queryConfig = queryConfig;
+    }
+
+    public String findNtuNniSfp(String ntuSize, String distanceRanges, String vendorType) {
+        String queryStr = queryConfig.getNtuNniSfpOrAaSfp().get("findNtuNniSfp").toString();
+
+        TypedQuery<String> query = entityManager.createQuery(queryStr, String.class);
+        query.setParameter("ntuSize", ntuSize);
+        query.setParameter("distanceRanges", "%" + distanceRanges + "%");
+        query.setParameter("vendorType", "%" + vendorType + "%");
+
+        return query.getResultList().stream().findFirst().orElse(null);
+    }
+
+    public String findAaSfp(String ntuSize, String distanceRanges, String vendorType) {
+        String queryStr = queryConfig.getNtuNniSfpOrAaSfp().get("findAaSfp").toString();
+
+        TypedQuery<String> query = entityManager.createQuery(queryStr, String.class);
+        query.setParameter("ntuSize", ntuSize);
+        query.setParameter("distanceRanges", "%" + distanceRanges + "%");
+        query.setParameter("vendorType", "%" + vendorType + "%");
+
+        return query.getResultList().stream().findFirst().orElse(null);
+    }
 }
