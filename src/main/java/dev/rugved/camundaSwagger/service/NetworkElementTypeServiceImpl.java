@@ -8,8 +8,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class NetworkElementTypeServiceImpl implements NetworkElementTypeService {
 
+    private final NetworkElementTypeRepository repository;
+
     @Autowired
-    private NetworkElementTypeRepository repository;
+    public NetworkElementTypeServiceImpl(NetworkElementTypeRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public String getVendorType(String networkElement) {
@@ -18,4 +22,3 @@ public class NetworkElementTypeServiceImpl implements NetworkElementTypeService 
                 .orElseThrow(() -> new RuntimeException("Network Element not found"));
     }
 }
-

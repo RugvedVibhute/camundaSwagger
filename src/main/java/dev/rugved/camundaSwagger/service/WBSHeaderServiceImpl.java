@@ -8,8 +8,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class WBSHeaderServiceImpl implements WBSHeaderService {
 
+    private final WBSHeaderRepository repository;
+
     @Autowired
-    private WBSHeaderRepository repository;
+    public WBSHeaderServiceImpl(WBSHeaderRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public WBSHeader getWBSHeaderDetailsByState(String stateOrProvince) {

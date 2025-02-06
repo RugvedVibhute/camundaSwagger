@@ -1,15 +1,13 @@
 package dev.rugved.camundaSwagger.worker;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.rugved.camundaSwagger.service.WBSHeaderService;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,20 +25,8 @@ public class WBSHeaderWorker {
         try {
             // Fetch and parse variables
             String var = job.getVariables();
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(var);
 
-            // Extract stateOrProvince
-            JsonNode stateNode = rootNode.path("relatedParty").get(1)
-                    .path("contactMedium").get(0)
-                    .path("characteristic")
-                    .path("stateOrProvince");
-
-            if (stateNode.isMissingNode() || stateNode.isNull()) {
-                throw new IllegalArgumentException("State or Province not found in input JSON");
-            }
-
-            String stateOrProvince = stateNode.asText();
+            String stateOrProvince = job.getVariable("stateOrProvince").toString();
             logger.info("State or Province: {}", stateOrProvince);
 
             // Fetch WBSHeader details from the service

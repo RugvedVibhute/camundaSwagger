@@ -1,7 +1,5 @@
 package dev.rugved.camundaSwagger.worker;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.rugved.camundaSwagger.entity.OtherAddress;
 import dev.rugved.camundaSwagger.entity.ShipToAddress;
 import dev.rugved.camundaSwagger.service.ShipToAddressService;
@@ -34,20 +32,8 @@ public class ShipToAddressWorker {
         try {
             // Fetch and parse variables
             String var = job.getVariables();
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(var);
 
-            // Extract stateOrProvince
-            JsonNode stateNode = rootNode.path("relatedParty").get(1)
-                    .path("contactMedium").get(0)
-                    .path("characteristic")
-                    .path("stateOrProvince");
-
-            if (stateNode.isMissingNode() || stateNode.isNull()) {
-                throw new IllegalArgumentException("State or Province not found in input JSON");
-            }
-
-            String stateOrProvince = stateNode.asText();
+            String stateOrProvince = job.getVariable("stateOrProvince").toString();
             logger.info("State or Province: {}", stateOrProvince);
 
             // Fetch details from database

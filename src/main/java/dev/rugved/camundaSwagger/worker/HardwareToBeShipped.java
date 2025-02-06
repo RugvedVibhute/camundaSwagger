@@ -1,8 +1,6 @@
 package dev.rugved.camundaSwagger.worker;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.rugved.camundaSwagger.entity.NtuType;
 import dev.rugved.camundaSwagger.entity.SkuId;
 import dev.rugved.camundaSwagger.service.*;
@@ -37,44 +35,13 @@ public class HardwareToBeShipped {
     public void hardwareToBeShipped(final JobClient client, final ActivatedJob job) throws JsonProcessingException {
         // Fetch the variables from the job
         String var = job.getVariables();
+        String networkElement = job.getVariable("networkElement").toString();
+        String distance = job.getVariable("distance").toString();
+        String ntuRequired = job.getVariable("ntuRequired").toString();
+        String ntuSize = job.getVariable("ntuSize").toString();
+        String uniPortCapacity = job.getVariable("uniPortCapacity").toString();
+        String uniInterfaceType = job.getVariable("uniInterfaceType").toString();
         System.out.println("Job Variables: " + var);
-
-        ObjectMapper objectMapper = new ObjectMapper();
-        JsonNode rootNode = objectMapper.readTree(var);
-
-        // Initialize variables
-        String networkElement = null, distance = null, ntuRequired = null, ntuSize = null;
-        String uniPortCapacity = null, uniInterfaceType = null;
-
-        // Extract variables from JSON
-        JsonNode shippingOrderItems = rootNode.path("shippingOrderItem");
-        if (shippingOrderItems.isArray()) {
-            for (JsonNode item : shippingOrderItems) {
-                JsonNode shipmentItems = item.path("shipment").path("shipmentItem");
-
-                if (shipmentItems.isArray()) {
-                    for (JsonNode shipmentItem : shipmentItems) {
-                        JsonNode productCharacteristics = shipmentItem
-                                .path("product")
-                                .path("productCharacteristic");
-
-                        for (JsonNode characteristic : productCharacteristics) {
-                            String name = characteristic.path("name").asText();
-                            String value = characteristic.path("value").asText();
-
-                            switch (name) {
-                                case "networkElement": networkElement = value; break;
-                                case "distance": distance = value; break;
-                                case "NTURequired": ntuRequired = value; break;
-                                case "ntuSize": ntuSize = value; break;
-                                case "UNIPortCapacity": uniPortCapacity = value; break;
-                                case "InterfaceType": uniInterfaceType = value; break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
 
         Map<String, Object> output = new HashMap<>();
 

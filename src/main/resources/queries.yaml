@@ -1,0 +1,6 @@
+queries:
+  wbsHeader:
+    findByStateOrProvince: "SELECT w FROM WBSHeader w WHERE w.stateOrProvince = :stateOrProvince"
+
+  networkElementType:
+    findByNetworkElement: "SELECT n FROM NetworkElementType n WHERE n.networkElement = :networkElement"

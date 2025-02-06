@@ -1,8 +1,7 @@
-package dev.rugved.camundaSwagger.service.impl;
+package dev.rugved.camundaSwagger.service;
 
 import dev.rugved.camundaSwagger.entity.SkuId;
 import dev.rugved.camundaSwagger.repository.SkuIdRepository;
-import dev.rugved.camundaSwagger.service.SkuIdService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

@@ -28,8 +28,9 @@ public class FetchVariablesWorker {
             // Initialize variables to store extracted values
             String networkElement = null, distance = null, ntuRequired = null, ntuSize = null;
             String uniPortCapacity = null, uniInterfaceType = null, stateOrProvince = null;
+            String installationMethod = null;
 
-            // Extract "stateOrProvince" from JSON path: relatedParty -> contactMedium -> characteristic
+            // Extract "stateOrProvince"
             JsonNode stateNode = rootNode.path("relatedParty").get(1)
                     .path("contactMedium").get(0)
                     .path("characteristic")
@@ -68,6 +69,17 @@ public class FetchVariablesWorker {
                 }
             }
 
+            // Extract "InstallationMethod" from "shippingOrderCharacteristic"
+            JsonNode shippingOrderCharacteristic = rootNode.path("shippingOrderCharacteristic");
+            if (shippingOrderCharacteristic.isArray()) {
+                for (JsonNode characteristic : shippingOrderCharacteristic) {
+                    if ("InstallationMethod".equals(characteristic.path("name").asText())) {
+                        installationMethod = characteristic.path("value").asText();
+                        break;
+                    }
+                }
+            }
+
             // Apply NTURequired logic: If NTURequired is "No", set ntuSize to "0"
             if ("No".equalsIgnoreCase(ntuRequired)) {
                 ntuSize = "0";
@@ -82,6 +94,7 @@ public class FetchVariablesWorker {
             output.put("uniPortCapacity", uniPortCapacity);
             output.put("uniInterfaceType", uniInterfaceType);
             output.put("stateOrProvince", stateOrProvince);
+            output.put("InstallationMethod", installationMethod);
 
             // Complete the job with extracted variables
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
@@ -91,7 +104,7 @@ public class FetchVariablesWorker {
             // Log and handle exceptions by sending an error message
             logger.error("Error processing fetchDbQueryParams job", e);
             Map<String, Object> output = new HashMap<>();
-            output.put("errorMessage", " " + e.getMessage());
+            output.put("errorMessage", e.getMessage());
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
         }
