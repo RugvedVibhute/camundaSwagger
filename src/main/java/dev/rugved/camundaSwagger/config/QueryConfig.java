@@ -12,7 +12,8 @@ public class QueryConfig {
     private Map<String, String> wbsHeader;
     private Map<String, String> networkElementType;
     private Map<String, String> ntuNniSfpOrAaSfp;
-    private Map<String, String> ntuType; // Add this
+    private Map<String, String> ntuType;
+    private Map<String, String> skuId; // Add this
 
     public Map<String, String> getWbsHeader() {
         return wbsHeader;
@@ -38,11 +39,19 @@ public class QueryConfig {
         this.ntuNniSfpOrAaSfp = ntuNniSfpOrAaSfp;
     }
 
-    public Map<String, String> getNtuType() { // Add this getter
+    public Map<String, String> getNtuType() {
         return ntuType;
     }
 
-    public void setNtuType(Map<String, String> ntuType) { // Add this setter
+    public void setNtuType(Map<String, String> ntuType) {
         this.ntuType = ntuType;
+    }
+
+    public Map<String, String> getSkuId() { // Add this getter
+        return skuId;
+    }
+
+    public void setSkuId(Map<String, String> skuId) { // Add this setter
+        this.skuId = skuId;
     }
 }

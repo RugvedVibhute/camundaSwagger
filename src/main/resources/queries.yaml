@@ -11,3 +11,6 @@ queries:
 
   ntuType:
     findByNtuSize: "SELECT n FROM NtuType n WHERE n.ntuSize = :ntuSize"
+
+  skuId:
+    findByAaUniSfp: "SELECT s FROM SkuId s WHERE s.aaUniSfp = :aaUniSfp"

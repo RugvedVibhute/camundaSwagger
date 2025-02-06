@@ -8,11 +8,16 @@ import org.springframework.stereotype.Service;
 @Service
 public class SkuIdServiceImpl implements SkuIdService {
 
+    private final SkuIdRepository repository;
+
     @Autowired
-    private SkuIdRepository skuIdRepository;
+    public SkuIdServiceImpl(SkuIdRepository repository) {
+        this.repository = repository;
+    }
 
     @Override
     public SkuId getSkuIdByAaUniSfp(String aaUniSfp) {
-        return skuIdRepository.findByAaUniSfp(aaUniSfp);
+        return repository.findByAaUniSfp(aaUniSfp)
+                .orElseThrow(() -> new RuntimeException("SkuId not found for aaUniSfp: " + aaUniSfp));
     }
 }
