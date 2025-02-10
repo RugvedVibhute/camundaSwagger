@@ -1,25 +1,38 @@
 package dev.rugved.camundaSwagger.repository;
 
-import dev.rugved.camundaSwagger.entity.UniWithOrWithoutNtu;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import dev.rugved.camundaSwagger.config.QueryConfig;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
-@Repository
-public interface UniWithOrWithoutNtuRepository extends JpaRepository<UniWithOrWithoutNtu, Long> {
+import static dev.rugved.camundaSwagger.util.Constants.*;
 
-    @Query("SELECT u.aaUniSfp FROM UniWithOrWithoutNtu u " +
-            "WHERE :distanceRanges LIKE CONCAT('%', u.distanceRanges, '%') " +
-            "AND u.ntuRequired = :ntuRequired " +
-            "AND u.ntuSize = :ntuSize " +
-            "AND u.vendorType LIKE CONCAT('%', :vendorType, '%') " +  // Use LIKE for vendorType
-            "AND u.uniPortCapacity = :uniPortCapacity " +
-            "AND u.uniInterfaceType = :uniInterfaceType")
-    String findAaUniSfp(@Param("distanceRanges") String distanceRanges,
-                        @Param("ntuRequired") String ntuRequired,
-                        @Param("ntuSize") String ntuSize,
-                        @Param("vendorType") String vendorType,
-                        @Param("uniPortCapacity") String uniPortCapacity,
-                        @Param("uniInterfaceType") String uniInterfaceType);
+@Repository
+public class UniWithOrWithoutNtuRepository {
+
+    @PersistenceContext
+    private EntityManager entityManager;
+
+    private final QueryConfig queryConfig;
+
+    @Autowired
+    public UniWithOrWithoutNtuRepository(QueryConfig queryConfig) {
+        this.queryConfig = queryConfig;
+    }
+
+    public String findAaUniSfp(String distanceRanges, String ntuRequired, String ntuSize, String vendorType, String uniPortCapacity, String uniInterfaceType) {
+        String queryStr = queryConfig.getUniWithOrWithoutNtu().get(FIND_AA_UNI_SFP).toString();
+
+        TypedQuery<String> query = entityManager.createQuery(queryStr, String.class);
+        query.setParameter(DISTANCE_RANGES, distanceRanges);
+        query.setParameter(NTU_REQUIRED, ntuRequired);
+        query.setParameter(NTU_SIZE, ntuSize);
+        query.setParameter(VENDOR_TYPE, "%" + vendorType + "%"); // Using LIKE operator
+        query.setParameter(UNI_PORT_CAPACITY, uniPortCapacity);
+        query.setParameter(UNI_INTERFACE_TYPE, uniInterfaceType);
+
+        return query.getSingleResult();
+    }
 }

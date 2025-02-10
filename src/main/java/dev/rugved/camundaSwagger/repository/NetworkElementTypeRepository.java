@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Optional;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Repository
 public class NetworkElementTypeRepository {
 
@@ -24,10 +26,10 @@ public class NetworkElementTypeRepository {
     }
 
     public Optional<NetworkElementType> findByNetworkElement(String networkElement) {
-        String queryStr = queryConfig.getNetworkElementType().get("findByNetworkElement").toString();
+        String queryStr = queryConfig.getNetworkElementType().get(FIND_BY_NETWORK_ELEMENT).toString();
 
         TypedQuery<NetworkElementType> query = entityManager.createQuery(queryStr, NetworkElementType.class);
-        query.setParameter("networkElement", networkElement);
+        query.setParameter(NETWORK_ELEMENT, networkElement);
 
         return query.getResultList().stream().findFirst();
     }

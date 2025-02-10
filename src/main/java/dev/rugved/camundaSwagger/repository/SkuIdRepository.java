@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Repository
 public class SkuIdRepository {
 
@@ -24,10 +26,10 @@ public class SkuIdRepository {
     }
 
     public Optional<SkuId> findByAaUniSfp(String aaUniSfp) {
-        String queryStr = queryConfig.getSkuId().get("findByAaUniSfp").toString();
+        String queryStr = queryConfig.getSkuId().get(FIND_BY_AA_UNI_SFP).toString();
 
         TypedQuery<SkuId> query = entityManager.createQuery(queryStr, SkuId.class);
-        query.setParameter("aaUniSfp", aaUniSfp);
+        query.setParameter(AA_UNI_SFP, aaUniSfp);
 
         return query.getResultList().stream().findFirst();
     }

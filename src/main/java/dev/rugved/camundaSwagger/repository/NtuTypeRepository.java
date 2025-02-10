@@ -10,6 +10,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Repository
 public class NtuTypeRepository {
 
@@ -24,10 +26,10 @@ public class NtuTypeRepository {
     }
 
     public Optional<NtuType> findByNtuSize(String ntuSize) {
-        String queryStr = queryConfig.getNtuType().get("findByNtuSize").toString();
+        String queryStr = queryConfig.getNtuType().get(FIND_BY_NTU_SIZE).toString();
 
         TypedQuery<NtuType> query = entityManager.createQuery(queryStr, NtuType.class);
-        query.setParameter("ntuSize", ntuSize);
+        query.setParameter(NTU_SIZE, ntuSize);
 
         return query.getResultList().stream().findFirst();
     }

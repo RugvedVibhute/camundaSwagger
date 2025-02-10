@@ -13,7 +13,9 @@ public class QueryConfig {
     private Map<String, String> networkElementType;
     private Map<String, String> ntuNniSfpOrAaSfp;
     private Map<String, String> ntuType;
-    private Map<String, String> skuId; // Add this
+    private Map<String, String> skuId;
+    private Map<String, String> uniWithOrWithoutNtu;
+    private Map<String, String> shipToAddressQueries;
 
     public Map<String, String> getWbsHeader() {
         return wbsHeader;
@@ -53,5 +55,21 @@ public class QueryConfig {
 
     public void setSkuId(Map<String, String> skuId) { // Add this setter
         this.skuId = skuId;
+    }
+
+    public Map<String, String> getUniWithOrWithoutNtu() { // Getter
+        return uniWithOrWithoutNtu;
+    }
+
+    public void setUniWithOrWithoutNtu(Map<String, String> uniWithOrWithoutNtu) { // Setter
+        this.uniWithOrWithoutNtu = uniWithOrWithoutNtu;
+    }
+
+    public Map<String, String> getShipToAddressQueries() { // Getter
+        return shipToAddressQueries;
+    }
+
+    public void setShipToAddressQueries(Map<String, String> shipToAddressQueries) { // Setter
+        this.shipToAddressQueries = shipToAddressQueries;
     }
 }

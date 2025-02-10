@@ -12,12 +12,14 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Component
 public class FetchVariablesWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(FetchVariablesWorker.class);
 
-    @JobWorker(type = "fetchVariables")
+    @JobWorker(type = JOB_TYPE_FETCHVARIABLES)
     public void fetchDbQueryParams(final JobClient client, final ActivatedJob job) {
         try {
             // Retrieve job variables as a JSON string
@@ -31,37 +33,37 @@ public class FetchVariablesWorker {
             String installationMethod = null;
 
             // Extract "stateOrProvince"
-            JsonNode stateNode = rootNode.path("relatedParty").get(1)
-                    .path("contactMedium").get(0)
-                    .path("characteristic")
-                    .path("stateOrProvince");
+            JsonNode stateNode = rootNode.path(RELATED_PARTY).get(1)
+                    .path(CONTACT_MEDIUM).get(0)
+                    .path(CHARACTERISTIC)
+                    .path(STATE_OR_PROVINCE);
             if (!stateNode.isMissingNode()) {
                 stateOrProvince = stateNode.asText();
             }
 
             // Extract shipping order characteristics
-            JsonNode shippingOrderItems = rootNode.path("shippingOrderItem");
+            JsonNode shippingOrderItems = rootNode.path(SHIPPING_ORDER_ITEM);
             if (shippingOrderItems.isArray()) {
                 for (JsonNode item : shippingOrderItems) {
-                    JsonNode shipmentItems = item.path("shipment").path("shipmentItem");
+                    JsonNode shipmentItems = item.path(SHIPMENT).path(SHIPMENT_ITEM);
                     if (shipmentItems.isArray()) {
                         for (JsonNode shipmentItem : shipmentItems) {
                             // Navigate to product characteristics
                             JsonNode productCharacteristics = shipmentItem
-                                    .path("product")
-                                    .path("productCharacteristic");
+                                    .path(PRODUCT)
+                                    .path(PRODUCT_CHARACTERISTIC);
 
                             // Extract relevant parameters based on characteristic names
                             for (JsonNode characteristic : productCharacteristics) {
                                 String name = characteristic.path("name").asText();
                                 String value = characteristic.path("value").asText();
                                 switch (name) {
-                                    case "networkElement": networkElement = value; break;
-                                    case "distance": distance = value; break;
-                                    case "NTURequired": ntuRequired = value; break;
-                                    case "ntuSize": ntuSize = value; break;
-                                    case "UNIPortCapacity": uniPortCapacity = value; break;
-                                    case "InterfaceType": uniInterfaceType = value; break;
+                                    case NETWORK_ELEMENT: networkElement = value; break;
+                                    case DISTANCE: distance = value; break;
+                                    case NTU_REQUIRED_REQUEST: ntuRequired = value; break;
+                                    case NTU_SIZE: ntuSize = value; break;
+                                    case UNI_PORT_CAPACITY_REQUEST: uniPortCapacity = value; break;
+                                    case INTERFACE_TYPE: uniInterfaceType = value; break;
                                 }
                             }
                         }
@@ -70,10 +72,10 @@ public class FetchVariablesWorker {
             }
 
             // Extract "InstallationMethod" from "shippingOrderCharacteristic"
-            JsonNode shippingOrderCharacteristic = rootNode.path("shippingOrderCharacteristic");
+            JsonNode shippingOrderCharacteristic = rootNode.path(SHIPPING_ORDER_CHARACTERISTIC);
             if (shippingOrderCharacteristic.isArray()) {
                 for (JsonNode characteristic : shippingOrderCharacteristic) {
-                    if ("InstallationMethod".equals(characteristic.path("name").asText())) {
+                    if (INSTALLATION_METHOD.equals(characteristic.path("name").asText())) {
                         installationMethod = characteristic.path("value").asText();
                         break;
                     }
@@ -87,14 +89,14 @@ public class FetchVariablesWorker {
 
             // Prepare output variables to send back
             Map<String, Object> output = new HashMap<>();
-            output.put("networkElement", networkElement);
-            output.put("distance", distance);
-            output.put("ntuRequired", ntuRequired);
-            output.put("ntuSize", ntuSize);
-            output.put("uniPortCapacity", uniPortCapacity);
-            output.put("uniInterfaceType", uniInterfaceType);
-            output.put("stateOrProvince", stateOrProvince);
-            output.put("InstallationMethod", installationMethod);
+            output.put(NETWORK_ELEMENT, networkElement);
+            output.put(DISTANCE, distance);
+            output.put(NTU_REQUIRED, ntuRequired);
+            output.put(NTU_SIZE, ntuSize);
+            output.put(UNI_PORT_CAPACITY, uniPortCapacity);
+            output.put(UNI_INTERFACE_TYPE, uniInterfaceType);
+            output.put(STATE_OR_PROVINCE, stateOrProvince);
+            output.put(INSTALLATION_METHOD, installationMethod);
 
             // Complete the job with extracted variables
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
@@ -104,7 +106,7 @@ public class FetchVariablesWorker {
             // Log and handle exceptions by sending an error message
             logger.error("Error processing fetchDbQueryParams job", e);
             Map<String, Object> output = new HashMap<>();
-            output.put("errorMessage", e.getMessage());
+            output.put(ERROR_MESSAGE, e.getMessage());
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
         }

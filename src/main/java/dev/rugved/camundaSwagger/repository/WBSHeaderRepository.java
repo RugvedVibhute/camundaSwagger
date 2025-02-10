@@ -11,6 +11,8 @@ import dev.rugved.camundaSwagger.config.QueryConfig;
 
 import java.util.Optional;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Repository
 public class WBSHeaderRepository {
 
@@ -25,10 +27,10 @@ public class WBSHeaderRepository {
     }
 
     public Optional<WBSHeader> findByStateOrProvince(String stateOrProvince) {
-        String queryStr = queryConfig.getWbsHeader().get("findByStateOrProvince").toString();
+        String queryStr = queryConfig.getWbsHeader().get(FIND_BY_STATE_OR_PROVINCE).toString();
 
         TypedQuery<WBSHeader> query = entityManager.createQuery(queryStr, WBSHeader.class);
-        query.setParameter("stateOrProvince", stateOrProvince);
+        query.setParameter(STATE_OR_PROVINCE, stateOrProvince);
 
         return query.getResultList().stream().findFirst();
     }

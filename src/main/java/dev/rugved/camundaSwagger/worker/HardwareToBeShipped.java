@@ -1,158 +1,134 @@
 package dev.rugved.camundaSwagger.worker;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.rugved.camundaSwagger.entity.NtuType;
 import dev.rugved.camundaSwagger.entity.SkuId;
 import dev.rugved.camundaSwagger.service.*;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Component
 public class HardwareToBeShipped {
 
-    @Autowired
-    private NetworkElementTypeService service;
+    private static final Logger logger = LoggerFactory.getLogger(HardwareToBeShipped.class);
 
-    @Autowired
-    private UniWithOrWithoutNtuService uniService;
+    private final NetworkElementTypeService service;
+    private final UniWithOrWithoutNtuService uniService;
+    private final SkuIdService skuIdService;
+    private final NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService;
+    private final NtuTypeService ntuTypeService;
 
-    @Autowired
-    private SkuIdService skuIdService;
+    public HardwareToBeShipped(NetworkElementTypeService service, UniWithOrWithoutNtuService uniService,
+                               SkuIdService skuIdService, NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService,
+                               NtuTypeService ntuTypeService) {
+        this.service = service;
+        this.uniService = uniService;
+        this.skuIdService = skuIdService;
+        this.ntuNniSfpOrAaSfpService = ntuNniSfpOrAaSfpService;
+        this.ntuTypeService = ntuTypeService;
+    }
 
-    @Autowired
-    private NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService;
-
-    @Autowired
-    private NtuTypeService ntuTypeService;
-
-    @JobWorker(type = "HardwareToBeShipped", tenantIds = "Infosys")
-    public void hardwareToBeShipped(final JobClient client, final ActivatedJob job) throws JsonProcessingException {
-        // Fetch the variables from the job
-        String var = job.getVariables();
-        String networkElement = job.getVariable("networkElement").toString();
-        String distance = job.getVariable("distance").toString();
-        String ntuRequired = job.getVariable("ntuRequired").toString();
-        String ntuSize = job.getVariable("ntuSize").toString();
-        String uniPortCapacity = job.getVariable("uniPortCapacity").toString();
-        String uniInterfaceType = job.getVariable("uniInterfaceType").toString();
-        System.out.println("Job Variables: " + var);
-
+    @JobWorker(type = JOB_TYPE_HARDWARE_TO_BE_SHIPPED)
+    public void hardwareToBeShipped(final JobClient client, final ActivatedJob job) {
         Map<String, Object> output = new HashMap<>();
 
         try {
+            String networkElement = job.getVariable(NETWORK_ELEMENT).toString();
+            String distance = job.getVariable(DISTANCE).toString();
+            String ntuRequired = job.getVariable(NTU_REQUIRED).toString();
+            String ntuSize = job.getVariable(NTU_SIZE).toString();
+            String uniPortCapacity = job.getVariable(UNI_PORT_CAPACITY).toString();
+            String uniInterfaceType = job.getVariable(UNI_INTERFACE_TYPE).toString();
+
+            logger.info("Processing HardwareToBeShipped job | networkElement: {}, distance: {}, ntuRequired: {}",
+                    networkElement, distance, ntuRequired);
+
             if ("No".equalsIgnoreCase(ntuRequired)) {
-                String distanceRanges = mapDistanceToDatabaseValue(distance);
-                String vendorType = (networkElement != null) ? service.getVendorType(networkElement) : null;
-
-                if (vendorType == null ) {
-                    throw new IllegalArgumentException("No Vendor Type found for networkElement :" +networkElement);
-                }
-
-                String skuIdValue = null;
-
-                String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, "0", vendorType, uniPortCapacity, uniInterfaceType);
-
-                if (aaUniSfp == null ) {
-                    throw new IllegalArgumentException("No aaUniSfp found for :" +distanceRanges +", ntuSize: "+"0" + ", vendorType: " +vendorType + ", uniPortCapacity: " +uniPortCapacity +", uniInterfaceType: " +uniInterfaceType);
-                }
-
-                SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
-
-                skuIdValue =  skuId.getAaUniSfpSkuId();
-
-                if(skuIdValue == null){
-                    throw new IllegalArgumentException("No skuId found for aaUniSfp :" +aaUniSfp);
-                }
-
-                output.put("aaUniSfp", aaUniSfp);
-                output.put("skuId", skuIdValue);
-                output.put("ntuRequired", ntuRequired);
-
+                handleNoNtuCase(output, networkElement, distance, uniPortCapacity, uniInterfaceType, ntuRequired);
             } else if ("Yes".equalsIgnoreCase(ntuRequired)) {
-                String ntuTypeValue = null, ntuTypeSkuIdValue = null, ntuNniSfp = null;
-                String ntuNniSfpSkuIdValue = null, aaSfp = null, aaSfpSkuIdValue = null, aaUniSfp = null, skuIdValue = null;
-
-                if (ntuSize != null) {
-                    NtuType ntuType = ntuTypeService.getNtuTypeBySize(ntuSize);
-                    if (ntuType == null) {
-                        throw new IllegalArgumentException("No NTU Type found for size: " + ntuSize);
-                    }
-
-                    ntuTypeValue = ntuType.getNtuType();
-                    SkuId ntuTypeSkuId = skuIdService.getSkuIdByAaUniSfp(ntuTypeValue);
-                    ntuTypeSkuIdValue = ntuTypeSkuId.getAaUniSfpSkuId();
-                    if (ntuTypeSkuIdValue == null) {
-                        throw new IllegalArgumentException("No ntuTypeSkuIdValue found for ntuTypeValue : " + ntuTypeValue);
-                    }
-                }
-
-                String vendorType = service.getVendorType(networkElement);
-                if (distance != null && ntuSize != null && uniPortCapacity != null && uniInterfaceType != null) {
-                    String distanceRanges = mapDistanceToDatabaseValue(distance);
-
-                    ntuNniSfp = ntuNniSfpOrAaSfpService.getNtuNniSfp(ntuSize, distanceRanges, vendorType);
-
-                    if (ntuNniSfp == null) {
-                        throw new IllegalArgumentException("No ntuNniSfp found for ntuNniSfp : " + ntuNniSfp +", distanceRanges: "+ distanceRanges + ", vendorType: "+ vendorType);
-                    }
-
-                    SkuId ntuNniSfpSkuId = skuIdService.getSkuIdByAaUniSfp(ntuNniSfp);
-                    ntuNniSfpSkuIdValue = ntuNniSfpSkuId.getAaUniSfpSkuId();
-
-                    if (ntuNniSfpSkuIdValue == null) {
-                        throw new IllegalArgumentException("No ntuNniSfpSkuId found for ntuNniSfp : " + ntuNniSfp);
-                    }
-
-                    aaSfp = ntuNniSfpOrAaSfpService.getAaSfp(ntuSize, distanceRanges, vendorType);
-                    SkuId aaSfpSkuId = skuIdService.getSkuIdByAaUniSfp(aaSfp);
-                    aaSfpSkuIdValue = aaSfpSkuId.getAaUniSfpSkuId();
-
-                    if (aaSfpSkuIdValue == null) {
-                        throw new IllegalArgumentException("No ntuNniSfpSkuId found for ntuNniSfp : " + ntuNniSfp);
-                    }
-
-                    aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);
-                    if (aaUniSfp != null) {
-                        SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
-                        skuIdValue = skuId.getAaUniSfpSkuId();
-                        if (skuIdValue == null) {
-                            throw new IllegalArgumentException("No skuId found for aaUniSfp : " + aaUniSfp);
-                        }
-                    }
-                }
-
-                output.put("ntuType", ntuTypeValue);
-                output.put("ntuTypeSkuId", ntuTypeSkuIdValue);
-                output.put("ntuNniSfp", ntuNniSfp);
-                output.put("ntuNniSfpSkuId", ntuNniSfpSkuIdValue);
-                output.put("aaSfp", aaSfp);
-                output.put("aaSfpSkuId", aaSfpSkuIdValue);
-                output.put("aaUniSfp", aaUniSfp);
-                output.put("skuId", skuIdValue);
-                output.put("ntuRequired", ntuRequired);
+                handleYesNtuCase(output, networkElement, distance, ntuSize, uniPortCapacity, uniInterfaceType, ntuRequired);
             }
 
-            output.put("errorMessage", null);
+            output.put(ERROR_MESSAGE, null);
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            System.out.println("Job completed with variables: " + output);
+            logger.info("Job completed successfully with variables: {}", output);
 
         } catch (Exception e) {
-            System.err.println("Error processing HardwareToBeShipped: " + e.getMessage());
-
-            // Return error variables instead of stopping the BPMN process
-            output.clear();
-            output.put("errorMessage", " " + e.getMessage());
+            logger.error("Error processing HardwareToBeShipped job: {}", e.getMessage(), e);
+            output.put(ERROR_MESSAGE, e.getMessage());
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
         }
     }
 
+    private void handleNoNtuCase(Map<String, Object> output, String networkElement, String distance,
+                                 String uniPortCapacity, String uniInterfaceType, String ntuRequired) {
+        String distanceRanges = mapDistanceToDatabaseValue(distance);
+        String vendorType = (networkElement != null) ? service.getVendorType(networkElement) : null;
+
+        if (vendorType == null) {
+            throw new IllegalArgumentException("No Vendor Type found for networkElement: " + networkElement);
+        }
+
+        String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, "0", vendorType, uniPortCapacity, uniInterfaceType);
+        if (aaUniSfp == null) {
+            throw new IllegalArgumentException("No aaUniSfp found for distance: " + distanceRanges +
+                    ", vendorType: " + vendorType + ", uniPortCapacity: " + uniPortCapacity + ", uniInterfaceType: " + uniInterfaceType);
+        }
+
+        SkuId skuId = skuIdService.getSkuIdByAaUniSfp(aaUniSfp);
+        String skuIdValue = (skuId != null) ? skuId.getAaUniSfpSkuId() : null;
+        if (skuIdValue == null) {
+            throw new IllegalArgumentException("No skuId found for aaUniSfp: " + aaUniSfp);
+        }
+
+        output.put(AA_UNI_SFP, aaUniSfp);
+        output.put(SKU_ID, skuIdValue);
+        output.put(NTU_REQUIRED, ntuRequired);
+    }
+
+    private void handleYesNtuCase(Map<String, Object> output, String networkElement, String distance,
+                                  String ntuSize, String uniPortCapacity, String uniInterfaceType, String ntuRequired) {
+        String vendorType = service.getVendorType(networkElement);
+        String distanceRanges = mapDistanceToDatabaseValue(distance);
+
+        NtuType ntuType = ntuTypeService.getNtuTypeBySize(ntuSize);
+        if (ntuType == null) {
+            throw new IllegalArgumentException("No NTU Type found for size: " + ntuSize);
+        }
+
+        String ntuTypeSkuIdValue = skuIdService.getSkuIdByAaUniSfp(ntuType.getNtuType()).getAaUniSfpSkuId();
+        if (ntuTypeSkuIdValue == null) {
+            throw new IllegalArgumentException("No SKU ID found for NTU Type: " + ntuType.getNtuType());
+        }
+
+        String ntuNniSfp = ntuNniSfpOrAaSfpService.getNtuNniSfp(ntuSize, distanceRanges, vendorType);
+        String ntuNniSfpSkuIdValue = skuIdService.getSkuIdByAaUniSfp(ntuNniSfp).getAaUniSfpSkuId();
+
+        String aaSfp = ntuNniSfpOrAaSfpService.getAaSfp(ntuSize, distanceRanges, vendorType);
+        String aaSfpSkuIdValue = skuIdService.getSkuIdByAaUniSfp(aaSfp).getAaUniSfpSkuId();
+
+        String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);
+        String skuIdValue = skuIdService.getSkuIdByAaUniSfp(aaUniSfp).getAaUniSfpSkuId();
+
+        output.put(NTU_TYPE, ntuType.getNtuType());
+        output.put(NTU_TYPE_SKU_ID, ntuTypeSkuIdValue);
+        output.put(NTU_NNI_SFP, ntuNniSfp);
+        output.put(NTU_NNI_SFP_SKU_ID, ntuNniSfpSkuIdValue);
+        output.put(AA_SFP, aaSfp);
+        output.put(AA_SFP_SKU_ID, aaSfpSkuIdValue);
+        output.put(AA_UNI_SFP, aaUniSfp);
+        output.put(SKU_ID, skuIdValue);
+        output.put(NTU_REQUIRED, ntuRequired);
+    }
     private String mapDistanceToDatabaseValue(String distance) {
         try {
             int numericDistance = Integer.parseInt(distance.trim());

@@ -14,3 +14,11 @@ queries:
 
   skuId:
     findByAaUniSfp: "SELECT s FROM SkuId s WHERE s.aaUniSfp = :aaUniSfp"
+
+  uniWithOrWithoutNtu:
+    findAaUniSfp: "SELECT u.aaUniSfp FROM UniWithOrWithoutNtu u WHERE :distanceRanges LIKE CONCAT('%', u.distanceRanges, '%') AND u.ntuRequired = :ntuRequired AND u.ntuSize = :ntuSize AND u.vendorType LIKE :vendorType AND u.uniPortCapacity = :uniPortCapacity AND u.uniInterfaceType = :uniInterfaceType"
+
+  shipToAddressQueries:
+    findAddressesByState: "SELECT ship_to_address_id, ship_to_address_role FROM public.ship_to_address WHERE state_or_province = :stateOrProvince"
+    findOtherAddresses: "SELECT sold_to_address_role, sold_to_address_id, network_site_address_role, network_site_address_id, additional_partner_address_role, additional_partner_address_id FROM public.other_address"
+

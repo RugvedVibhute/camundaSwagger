@@ -8,12 +8,12 @@ import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static dev.rugved.camundaSwagger.util.Constants.*;
 
 @Component
 public class ShipToAddressWorker {
@@ -22,63 +22,53 @@ public class ShipToAddressWorker {
 
     private final ShipToAddressService shipToAddressService;
 
-    @Autowired
     public ShipToAddressWorker(ShipToAddressService shipToAddressService) {
         this.shipToAddressService = shipToAddressService;
     }
 
-    @JobWorker(type = "shipToAddress")
+    @JobWorker(type = JOB_TYPE_SHIP_TO_ADDRESS)
     public void shipToAddress(final JobClient client, final ActivatedJob job) {
         try {
-            // Fetch and parse variables
-            String var = job.getVariables();
+            String stateOrProvince = job.getVariable(STATE_OR_PROVINCE).toString();
+            logger.info("Processing shipToAddress job | StateOrProvince: {}", stateOrProvince);
 
-            String stateOrProvince = job.getVariable("stateOrProvince").toString();
-            logger.info("State or Province: {}", stateOrProvince);
-
-            // Fetch details from database
             List<ShipToAddress> addresses = shipToAddressService.getShipToAddressesByState(stateOrProvince);
-
             List<OtherAddress> otherAddresses = shipToAddressService.getOtherAddresses();
 
-            // Prepare the output map
-            Map<String, Object> output = new HashMap<>();
-            if (!addresses.isEmpty()) {
-                output.put("shipToAddresses", addresses.stream()
-                        .map(address -> Map.of(
-                                "shipToAddressId", address.getShipToAddressId(),
-                                "shipToAddressRole", address.getShipToAddressRole()))
-                        .toList());
-            } else {
+            if (addresses.isEmpty()) {
                 throw new IllegalArgumentException("No shipToAddresses details found for state: " + stateOrProvince);
             }
 
-            output.put("stateOrProvince", stateOrProvince);
-
-            if (!otherAddresses.isEmpty()) {
-                output.put("otherAddresses", otherAddresses.stream()
-                        .map(address -> Map.of(
-                                "soldToAddressRole", address.getSoldToAddressRole(),
-                                "soldToAddressId", address.getSoldToAddressId(),
-                                "networkSiteAddressRole", address.getNetworkSiteAddressRole(),
-                                "networkSiteAddressId", address.getNetworkSiteAddressId(),
-                                "additionalPartnerAddressRole", address.getAdditionalPartnerAddressRole(),
-                                "additionalPartnerAddressId", address.getAdditionalPartnerAddressId()))
-                        .toList());
-            } else {
+            if (otherAddresses.isEmpty()) {
                 throw new IllegalArgumentException("No otherAddresses details found");
             }
 
-            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+            Map<String, Object> output = Map.of(
+                    SHIP_TO_ADDRESSES, addresses.stream()
+                            .map(address -> Map.of(
+                                    SHIP_TO_ADDRESS_ID, address.getShipToAddressId(),
+                                    SHIP_TO_ADDRESS_ROLE, address.getShipToAddressRole()))
+                            .toList(),
+                    STATE_OR_PROVINCE, stateOrProvince,
+                    OTHER_ADDRESSES, otherAddresses.stream()
+                            .map(address -> Map.of(
+                                    SOLD_TO_ADDRESS_ROLE, address.getSoldToAddressRole(),
+                                    SOLD_TO_ADDRESS_ID, address.getSoldToAddressId(),
+                                    NETWORK_SITE_ADDRESS_ROLE, address.getNetworkSiteAddressRole(),
+                                    NETWORK_SITE_ADDRESS_ID, address.getNetworkSiteAddressId(),
+                                    ADDITIONAL_PARTNER_ADDRESS_ROLE, address.getAdditionalPartnerAddressRole(),
+                                    ADDITIONAL_PARTNER_ADDRESS_ID, address.getAdditionalPartnerAddressId()))
+                            .toList()
+            );
 
-            logger.info("Job completed with variables: {}", output);
+            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+            logger.info("shipToAddress job completed successfully | Variables: {}", output);
 
         } catch (Exception e) {
-            logger.error("Error processing fetchWBSDetails job", e);
-            Map<String, Object> output = new HashMap<>();
-            output.put("errorMessage", " " + e.getMessage());
+            logger.error("Error processing shipToAddress job: {}", e.getMessage(), e);
 
-            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+            Map<String, Object> errorOutput = Map.of(ERROR_MESSAGE, e.getMessage());
+            client.newCompleteCommand(job.getKey()).variables(errorOutput).send().join();
         }
     }
 }

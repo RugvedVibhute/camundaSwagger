@@ -6,55 +6,47 @@ import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
 import java.util.Map;
+
+import static dev.rugved.camundaSwagger.util.Constants.*;
 
 @Component
 public class WBSHeaderWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(WBSHeaderWorker.class);
+    private final WBSHeaderService service;
 
-    @Autowired
-    private WBSHeaderService service;
+    public WBSHeaderWorker(WBSHeaderService service) {
+        this.service = service;
+    }
 
-    @JobWorker(type = "fetchWBSDetails")
+    @JobWorker(type = JOB_TYPE_FETCH_WBS_DETAILS)
     public void fetchWBSDetails(final JobClient client, final ActivatedJob job) {
         try {
-            // Fetch and parse variables
-            String var = job.getVariables();
+            String stateOrProvince = job.getVariable(STATE_OR_PROVINCE).toString();
+            logger.info("Processing fetchWBSDetails job | StateOrProvince: {}", stateOrProvince);
 
-            String stateOrProvince = job.getVariable("stateOrProvince").toString();
-            logger.info("State or Province: {}", stateOrProvince);
-
-            // Fetch WBSHeader details from the service
             var wbsHeaderDetails = service.getWBSHeaderDetailsByState(stateOrProvince);
             if (wbsHeaderDetails == null) {
                 throw new IllegalArgumentException("No WBS Header details found for state: " + stateOrProvince);
             }
 
-            logger.info("WBS Header: {}, Customer Type: {}, Customer Sub-Type: {}",
-                    wbsHeaderDetails.getWbsHeader(),
-                    wbsHeaderDetails.getCustomerType(),
-                    wbsHeaderDetails.getCustomerSubType());
-
-            // Prepare the output map
-            Map<String, Object> output = new HashMap<>();
-            output.put("wbsHeader", wbsHeaderDetails.getWbsHeader());
-            output.put("customerType", wbsHeaderDetails.getCustomerType());
-            output.put("customerSubType", wbsHeaderDetails.getCustomerSubType());
+            Map<String, Object> output = Map.of(
+                    WBS_HEADER, wbsHeaderDetails.getWbsHeader(),
+                    CUSTOMER_TYPE, wbsHeaderDetails.getCustomerType(),
+                    CUSTOMER_SUBTYPE, wbsHeaderDetails.getCustomerSubType()
+            );
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            logger.info("Job completed with variables: {}", output);
+            logger.info("fetchWBSDetails job completed successfully | Variables: {}", output);
 
         } catch (Exception e) {
-        logger.error("Error processing fetchWBSDetails job", e);
-        Map<String, Object> output = new HashMap<>();
-        output.put("errorMessage", " " + e.getMessage());
+            logger.error("Error processing fetchWBSDetails job: {}", e.getMessage(), e);
 
-        client.newCompleteCommand(job.getKey()).variables(output).send().join();
-    }
+            Map<String, Object> errorOutput = Map.of(ERROR_MESSAGE, e.getMessage());
+            client.newCompleteCommand(job.getKey()).variables(errorOutput).send().join();
+        }
     }
 }
