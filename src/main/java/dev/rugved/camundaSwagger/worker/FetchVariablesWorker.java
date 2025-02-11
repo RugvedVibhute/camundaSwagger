@@ -33,12 +33,20 @@ public class FetchVariablesWorker {
             String installationMethod = null;
 
             // Extract "stateOrProvince"
-            JsonNode stateNode = rootNode.path(RELATED_PARTY).get(1)
-                    .path(CONTACT_MEDIUM).get(0)
-                    .path(CHARACTERISTIC)
-                    .path(STATE_OR_PROVINCE);
-            if (!stateNode.isMissingNode()) {
-                stateOrProvince = stateNode.asText();
+            JsonNode relatedParties = rootNode.path(RELATED_PARTY);
+            if (relatedParties.isArray()) {
+                for (JsonNode party : relatedParties) {
+                    JsonNode contactMediums = party.path(CONTACT_MEDIUM);
+                    if (contactMediums.isArray()) {
+                        for (JsonNode contactMedium : contactMediums) {
+                            JsonNode characteristicNode = contactMedium.path(CHARACTERISTIC);
+                            if (characteristicNode.has(STATE_OR_PROVINCE)) {
+                                stateOrProvince = characteristicNode.path(STATE_OR_PROVINCE).asText();
+                                break; // Stop searching once found
+                            }
+                        }
+                    }
+                }
             }
 
             // Extract shipping order characteristics
@@ -48,28 +56,42 @@ public class FetchVariablesWorker {
                     JsonNode shipmentItems = item.path(SHIPMENT).path(SHIPMENT_ITEM);
                     if (shipmentItems.isArray()) {
                         for (JsonNode shipmentItem : shipmentItems) {
+                            // Get product specification name
+                            String productSpecificationName = shipmentItem.path(PRODUCT)
+                                    .path(PRODUCT_SPECIFICATION)
+                                    .path("name").asText();
+
                             // Navigate to product characteristics
                             JsonNode productCharacteristics = shipmentItem
                                     .path(PRODUCT)
                                     .path(PRODUCT_CHARACTERISTIC);
 
-                            // Extract relevant parameters based on characteristic names
+                            // Extract relevant parameters based on characteristic names and product type
                             for (JsonNode characteristic : productCharacteristics) {
                                 String name = characteristic.path("name").asText();
                                 String value = characteristic.path("value").asText();
-                                switch (name) {
-                                    case NETWORK_ELEMENT: networkElement = value; break;
-                                    case DISTANCE: distance = value; break;
-                                    case NTU_REQUIRED_REQUEST: ntuRequired = value; break;
-                                    case NTU_SIZE: ntuSize = value; break;
-                                    case UNI_PORT_CAPACITY_REQUEST: uniPortCapacity = value; break;
-                                    case INTERFACE_TYPE: uniInterfaceType = value; break;
+
+                                // Apply filtering based on productSpecification.name
+                                if ("NTU PS".equals(productSpecificationName)) {
+                                    switch (name) {
+                                        case NTU_SIZE: ntuSize = value; break;
+                                        case DISTANCE: distance = value; break;
+                                        case NETWORK_ELEMENT: networkElement = value; break;
+                                    }
+                                } else if ("UNI".equals(productSpecificationName)) {
+                                    switch (name) {
+                                        case NTU_REQUIRED_REQUEST: ntuRequired = value; break;
+                                        case UNI_PORT_CAPACITY_REQUEST: uniPortCapacity = value; break;
+                                        case INTERFACE_TYPE: uniInterfaceType = value; break;
+                                        case DISTANCE: distance = value; break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+
 
             // Extract "InstallationMethod" from "shippingOrderCharacteristic"
             JsonNode shippingOrderCharacteristic = rootNode.path(SHIPPING_ORDER_CHARACTERISTIC);
@@ -88,15 +110,16 @@ public class FetchVariablesWorker {
             }
 
             // Prepare output variables to send back
-            Map<String, Object> output = new HashMap<>();
-            output.put(NETWORK_ELEMENT, networkElement);
-            output.put(DISTANCE, distance);
-            output.put(NTU_REQUIRED, ntuRequired);
-            output.put(NTU_SIZE, ntuSize);
-            output.put(UNI_PORT_CAPACITY, uniPortCapacity);
-            output.put(UNI_INTERFACE_TYPE, uniInterfaceType);
-            output.put(STATE_OR_PROVINCE, stateOrProvince);
-            output.put(INSTALLATION_METHOD, installationMethod);
+            Map<String, Object> output = Map.of(
+                    NETWORK_ELEMENT, networkElement,
+                    DISTANCE, distance,
+                    NTU_REQUIRED, ntuRequired,
+                    NTU_SIZE, ntuSize,
+                    UNI_PORT_CAPACITY, uniPortCapacity,
+                    UNI_INTERFACE_TYPE, uniInterfaceType,
+                    STATE_OR_PROVINCE, stateOrProvince,
+                    INSTALLATION_METHOD, installationMethod
+            );
 
             // Complete the job with extracted variables
             client.newCompleteCommand(job.getKey()).variables(output).send().join();

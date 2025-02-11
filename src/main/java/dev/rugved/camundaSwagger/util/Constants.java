@@ -24,6 +24,7 @@ public class Constants {
     public static final String NETWORK_SITE_ADDRESS_ID = "networkSiteAddressId";
     public static final String ADDITIONAL_PARTNER_ADDRESS_ROLE = "additionalPartnerAddressRole";
     public static final String ADDITIONAL_PARTNER_ADDRESS_ID = "additionalPartnerAddressId";
+    public static final String PRODUCT_SPECIFICATION = "productSpecification";
 
     // HardwareToBeShipped Constants
     public static final String NETWORK_ELEMENT = "networkElement";
