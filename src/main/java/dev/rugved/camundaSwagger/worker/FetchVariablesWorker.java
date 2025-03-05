@@ -26,29 +26,16 @@ public class FetchVariablesWorker {
             String var = job.getVariables();
             ObjectMapper objectMapper = new ObjectMapper();
             JsonNode rootNode = objectMapper.readTree(var);
-
             // Initialize variables to store extracted values
             String networkElement = null, distance = null, ntuRequired = null, ntuSize = null;
             String uniPortCapacity = null, uniInterfaceType = null, stateOrProvince = null;
-            String installationMethod = null;
+            String installationMethod = null, CorrelationId = null;
 
             // Extract "stateOrProvince"
-            JsonNode relatedParties = rootNode.path(RELATED_PARTY);
-            if (relatedParties.isArray()) {
-                for (JsonNode party : relatedParties) {
-                    JsonNode contactMediums = party.path(CONTACT_MEDIUM);
-                    if (contactMediums.isArray()) {
-                        for (JsonNode contactMedium : contactMediums) {
-                            JsonNode characteristicNode = contactMedium.path(CHARACTERISTIC);
-                            if (characteristicNode.has(STATE_OR_PROVINCE)) {
-                                stateOrProvince = characteristicNode.path(STATE_OR_PROVINCE).asText();
-                                break; // Stop searching once found
-                            }
-                        }
-                    }
-                }
+            JsonNode stateNode = rootNode.path(RELATED_PARTY).get(1).path(CONTACT_MEDIUM).get(0).path(CHARACTERISTIC).path(STATE_OR_PROVINCE);
+            if (!stateNode.isMissingNode()) {
+                stateOrProvince = stateNode.asText();
             }
-
             // Extract shipping order characteristics
             JsonNode shippingOrderItems = rootNode.path(SHIPPING_ORDER_ITEM);
             if (shippingOrderItems.isArray()) {
@@ -56,34 +43,33 @@ public class FetchVariablesWorker {
                     JsonNode shipmentItems = item.path(SHIPMENT).path(SHIPMENT_ITEM);
                     if (shipmentItems.isArray()) {
                         for (JsonNode shipmentItem : shipmentItems) {
-                            // Get product specification name
-                            String productSpecificationName = shipmentItem.path(PRODUCT)
-                                    .path(PRODUCT_SPECIFICATION)
-                                    .path("name").asText();
-
                             // Navigate to product characteristics
-                            JsonNode productCharacteristics = shipmentItem
-                                    .path(PRODUCT)
-                                    .path(PRODUCT_CHARACTERISTIC);
-
-                            // Extract relevant parameters based on characteristic names and product type
-                            for (JsonNode characteristic : productCharacteristics) {
-                                String name = characteristic.path("name").asText();
-                                String value = characteristic.path("value").asText();
-
-                                // Apply filtering based on productSpecification.name
-                                if ("NTU PS".equals(productSpecificationName)) {
+                            JsonNode product = shipmentItem.path("product");
+                            JsonNode productCharacteristics = product.path("productSpecification");
+                            // Extract relevant parameters based on characteristic names
+                            if (productCharacteristics.path("id").asText().equals("zz123")) {
+                                for (JsonNode characteristic : productCharacteristics) {
+                                    String name = characteristic.path("name").asText();
+                                    String value = characteristic.path("value").asText();
                                     switch (name) {
-                                        case NTU_SIZE: ntuSize = value; break;
-                                        case DISTANCE: distance = value; break;
-                                        case NETWORK_ELEMENT: networkElement = value; break;
-                                    }
-                                } else if ("UNI".equals(productSpecificationName)) {
-                                    switch (name) {
-                                        case NTU_REQUIRED_REQUEST: ntuRequired = value; break;
-                                        case UNI_PORT_CAPACITY_REQUEST: uniPortCapacity = value; break;
-                                        case INTERFACE_TYPE: uniInterfaceType = value; break;
-                                        case DISTANCE: distance = value; break;
+                                        case NETWORK_ELEMENT:
+                                            networkElement = value;
+                                            break;
+                                        case DISTANCE:
+                                            distance = value;
+                                            break;
+                                        case NTU_REQUIRED_REQUEST:
+                                            ntuRequired = value;
+                                            break;
+                                        case NTU_SIZE:
+                                            ntuSize = value;
+                                            break;
+                                        case UNI_PORT_CAPACITY_REQUEST:
+                                            uniPortCapacity = value;
+                                            break;
+                                        case INTERFACE_TYPE:
+                                            uniInterfaceType = value;
+                                            break;
                                     }
                                 }
                             }
@@ -91,15 +77,19 @@ public class FetchVariablesWorker {
                     }
                 }
             }
-
-
             // Extract "InstallationMethod" from "shippingOrderCharacteristic"
             JsonNode shippingOrderCharacteristic = rootNode.path(SHIPPING_ORDER_CHARACTERISTIC);
             if (shippingOrderCharacteristic.isArray()) {
                 for (JsonNode characteristic : shippingOrderCharacteristic) {
-                    if (INSTALLATION_METHOD.equals(characteristic.path("name").asText())) {
-                        installationMethod = characteristic.path("value").asText();
-                        break;
+                    String name = characteristic.path("name").asText();
+                    String value = characteristic.path("value").asText();
+                    switch (name) {
+                        case INSTALLATION_METHOD:
+                            installationMethod = value;
+                            break;
+                        case "CorrelationId":
+                            CorrelationId = value;
+                            break;
                     }
                 }
             }
@@ -110,16 +100,16 @@ public class FetchVariablesWorker {
             }
 
             // Prepare output variables to send back
-            Map<String, Object> output = Map.of(
-                    NETWORK_ELEMENT, networkElement,
-                    DISTANCE, distance,
-                    NTU_REQUIRED, ntuRequired,
-                    NTU_SIZE, ntuSize,
-                    UNI_PORT_CAPACITY, uniPortCapacity,
-                    UNI_INTERFACE_TYPE, uniInterfaceType,
-                    STATE_OR_PROVINCE, stateOrProvince,
-                    INSTALLATION_METHOD, installationMethod
-            );
+            Map<String, Object> output = new HashMap<>();
+            output.put(NETWORK_ELEMENT, networkElement);
+            output.put(DISTANCE, distance);
+            output.put(NTU_REQUIRED, ntuRequired);
+            output.put(NTU_SIZE, ntuSize);
+            output.put(UNI_PORT_CAPACITY, uniPortCapacity);
+            output.put(UNI_INTERFACE_TYPE, uniInterfaceType);
+            output.put(STATE_OR_PROVINCE, stateOrProvince);
+            output.put(INSTALLATION_METHOD, installationMethod);
+            output.put("CorrelationId", CorrelationId);
 
             // Complete the job with extracted variables
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
@@ -128,10 +118,9 @@ public class FetchVariablesWorker {
         } catch (Exception e) {
             // Log and handle exceptions by sending an error message
             logger.error("Error processing fetchDbQueryParams job", e);
-            Map<String, Object> output = new HashMap<>();
-            output.put(ERROR_MESSAGE, e.getMessage());
+            Map<String, Object> errorOutput = Map.of(ERROR_MESSAGE, e.getMessage(), "errorCode", "CAM-" + job.getKey());
 
-            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+            client.newCompleteCommand(job.getKey()).variables(errorOutput).send().join();
         }
     }
 }
