@@ -1,7 +1,5 @@
 package dev.rugved.camundaSwagger.worker;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -10,117 +8,100 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
-import static dev.rugved.camundaSwagger.util.Constants.*;
 
 @Component
 public class FetchVariablesWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(FetchVariablesWorker.class);
+    private static final String JOB_TYPE_FETCHVARIABLES = "fetchVariables";
+    private static final String TARGET_PRODUCT_SPEC_ID = "601c8c38-07c6-4deb-b473-f15cd843b712";
 
     @JobWorker(type = JOB_TYPE_FETCHVARIABLES)
     public void fetchDbQueryParams(final JobClient client, final ActivatedJob job) {
         try {
-            // Retrieve job variables as a JSON string
-            String var = job.getVariables();
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(var);
-            // Initialize variables to store extracted values
-            String networkElement = null, distance = null, ntuRequired = null, ntuSize = null;
-            String uniPortCapacity = null, uniInterfaceType = null, stateOrProvince = null;
-            String installationMethod = null, CorrelationId = null;
+            Map<String, Object> variables = job.getVariablesAsMap();
 
-            // Extract "stateOrProvince"
-            JsonNode stateNode = rootNode.path(RELATED_PARTY).get(1).path(CONTACT_MEDIUM).get(0).path(CHARACTERISTIC).path(STATE_OR_PROVINCE);
-            if (!stateNode.isMissingNode()) {
-                stateOrProvince = stateNode.asText();
+            Map<String, Object> output = new HashMap<>();
+            output.put("stateOrProvince", extractStateOrProvince(variables));
+            output.put("InstallationMethod", extractInstallationMethod(variables));
+            extractProductCharacteristics(variables, output);
+
+            logger.info("Extracted Variables: {}", output);
+
+            client.newCompleteCommand(job.getKey()).variables(output).send().join();
+        } catch (Exception e) {
+            logger.error("Error processing job variables", e);
+            Map<String, Object> errorOutput = Map.of("errorMessage", e.getMessage(), "errorCode", "CAM-" + job.getKey());
+            client.newFailCommand(job.getKey()).retries(0).variables(errorOutput).send().join();
+        }
+    }
+
+    private String extractStateOrProvince(Map<String, Object> variables) {
+        List<Map<String, Object>> relatedParty = (List<Map<String, Object>>) variables.get("relatedParty");
+        if (relatedParty != null) {
+            for (Map<String, Object> party : relatedParty) {
+                List<Map<String, Object>> contactMedium = (List<Map<String, Object>>) party.get("contactMedium");
+                if (contactMedium != null) {
+                    for (Map<String, Object> contact : contactMedium) {
+                        Map<String, Object> characteristic = (Map<String, Object>) contact.get("characteristic");
+                        if (characteristic != null && characteristic.containsKey("stateOrProvince")) {
+                            return (String) characteristic.get("stateOrProvince");
+                        }
+                    }
+                }
             }
-            // Extract shipping order characteristics
-            JsonNode shippingOrderItems = rootNode.path(SHIPPING_ORDER_ITEM);
-            if (shippingOrderItems.isArray()) {
-                for (JsonNode item : shippingOrderItems) {
-                    JsonNode shipmentItems = item.path(SHIPMENT).path(SHIPMENT_ITEM);
-                    if (shipmentItems.isArray()) {
-                        for (JsonNode shipmentItem : shipmentItems) {
-                            // Navigate to product characteristics
-                            JsonNode product = shipmentItem.path("product");
-                            JsonNode productCharacteristics = product.path("productSpecification");
-                            // Extract relevant parameters based on characteristic names
-                            if (productCharacteristics.path("id").asText().equals("zz123")) {
-                                for (JsonNode characteristic : productCharacteristics) {
-                                    String name = characteristic.path("name").asText();
-                                    String value = characteristic.path("value").asText();
-                                    switch (name) {
-                                        case NETWORK_ELEMENT:
-                                            networkElement = value;
-                                            break;
-                                        case DISTANCE:
-                                            distance = value;
-                                            break;
-                                        case NTU_REQUIRED_REQUEST:
-                                            ntuRequired = value;
-                                            break;
-                                        case NTU_SIZE:
-                                            ntuSize = value;
-                                            break;
-                                        case UNI_PORT_CAPACITY_REQUEST:
-                                            uniPortCapacity = value;
-                                            break;
-                                        case INTERFACE_TYPE:
-                                            uniInterfaceType = value;
-                                            break;
-                                    }
+        }
+        return null;
+    }
+
+    private String extractInstallationMethod(Map<String, Object> variables) {
+        List<Map<String, Object>> characteristics = (List<Map<String, Object>>) variables.get("shippingOrderCharacteristic");
+        if (characteristics != null) {
+            for (Map<String, Object> characteristic : characteristics) {
+                if ("InstallationMethod".equals(characteristic.get("name"))) {
+                    return (String) characteristic.get("value");
+                }
+            }
+        }
+        return null;
+    }
+
+    private void extractProductCharacteristics(Map<String, Object> variables, Map<String, Object> output) {
+        List<Map<String, Object>> shippingOrderItems = (List<Map<String, Object>>) variables.get("shippingOrderItem");
+        if (shippingOrderItems != null) {
+            for (Map<String, Object> orderItem : shippingOrderItems) {
+                List<Map<String, Object>> shipmentItems = (List<Map<String, Object>>) ((Map<String, Object>) orderItem.get("shipment")).get("shipmentItem");
+                if (shipmentItems != null) {
+                    for (Map<String, Object> shipmentItem : shipmentItems) {
+                        Map<String, Object> product = (Map<String, Object>) shipmentItem.get("product");
+                        if (product != null) {
+                            Map<String, Object> productSpec = (Map<String, Object>) product.get("productSpecification");
+                            if (productSpec != null && TARGET_PRODUCT_SPEC_ID.equals(productSpec.get("id"))) {
+                                List<Map<String, Object>> characteristics = (List<Map<String, Object>>) product.get("productCharacteristic");
+                                if (characteristics != null) {
+                                    output.put("networkElement", getCharacteristicValue(characteristics, "networkElement"));
+                                    output.put("distance", getCharacteristicValue(characteristics, "distance"));
+                                    output.put("ntuRequired", getCharacteristicValue(characteristics, "NTURequired"));
+                                    output.put("ntuSize", "No".equalsIgnoreCase((String) output.get("ntuRequired")) ? "0" : null);
+                                    output.put("uniPortCapacity", getCharacteristicValue(characteristics, "UNIPortCapacity"));
+                                    output.put("uniInterfaceType", getCharacteristicValue(characteristics, "InterfaceType"));
                                 }
                             }
                         }
                     }
                 }
             }
-            // Extract "InstallationMethod" from "shippingOrderCharacteristic"
-            JsonNode shippingOrderCharacteristic = rootNode.path(SHIPPING_ORDER_CHARACTERISTIC);
-            if (shippingOrderCharacteristic.isArray()) {
-                for (JsonNode characteristic : shippingOrderCharacteristic) {
-                    String name = characteristic.path("name").asText();
-                    String value = characteristic.path("value").asText();
-                    switch (name) {
-                        case INSTALLATION_METHOD:
-                            installationMethod = value;
-                            break;
-                        case "CorrelationId":
-                            CorrelationId = value;
-                            break;
-                    }
-                }
-            }
-
-            // Apply NTURequired logic: If NTURequired is "No", set ntuSize to "0"
-            if ("No".equalsIgnoreCase(ntuRequired)) {
-                ntuSize = "0";
-            }
-
-            // Prepare output variables to send back
-            Map<String, Object> output = new HashMap<>();
-            output.put(NETWORK_ELEMENT, networkElement);
-            output.put(DISTANCE, distance);
-            output.put(NTU_REQUIRED, ntuRequired);
-            output.put(NTU_SIZE, ntuSize);
-            output.put(UNI_PORT_CAPACITY, uniPortCapacity);
-            output.put(UNI_INTERFACE_TYPE, uniInterfaceType);
-            output.put(STATE_OR_PROVINCE, stateOrProvince);
-            output.put(INSTALLATION_METHOD, installationMethod);
-            output.put("CorrelationId", CorrelationId);
-
-            // Complete the job with extracted variables
-            client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            logger.info("Job completed with extracted parameters: {}", output);
-
-        } catch (Exception e) {
-            // Log and handle exceptions by sending an error message
-            logger.error("Error processing fetchDbQueryParams job", e);
-            Map<String, Object> errorOutput = Map.of(ERROR_MESSAGE, e.getMessage(), "errorCode", "CAM-" + job.getKey());
-
-            client.newCompleteCommand(job.getKey()).variables(errorOutput).send().join();
         }
+    }
+
+    private String getCharacteristicValue(List<Map<String, Object>> characteristics, String name) {
+        for (Map<String, Object> characteristic : characteristics) {
+            if (name.equals(characteristic.get("name"))) {
+                return (String) characteristic.get("value");
+            }
+        }
+        return null;
     }
 }
