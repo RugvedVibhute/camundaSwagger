@@ -69,18 +69,24 @@ public class FetchVariablesWorker {
 
     private Map<String, Object> extractProductDetails(Map<String, Object> variables) {
         Map<String, Object> productDetails = new HashMap<>();
-        int ntuSize = 0;
+        Integer ntuSize = 0; // Default value
+        Integer ntuSizeFromNTUProduct = null; // Store NTU size separately if found in NTU product block
 
         List<Map<String, Object>> shippingOrderItems = (List<Map<String, Object>>) variables.get("shippingOrderItem");
+
         for (Map<String, Object> shippingOrderItem : shippingOrderItems) {
             Map<String, Object> shipment = (Map<String, Object>) shippingOrderItem.get("shipment");
             List<Map<String, Object>> shipmentItems = (List<Map<String, Object>>) shipment.get("shipmentItem");
+
             for (Map<String, Object> shipmentItem : shipmentItems) {
                 Map<String, Object> product = (Map<String, Object>) shipmentItem.get("product");
                 Map<String, Object> productSpecification = (Map<String, Object>) product.get("productSpecification");
+                String productSpecId = (String) productSpecification.get("id");
 
-                if (TARGET_PRODUCT_SPEC_ID.equals(productSpecification.get("id"))) {
-                    List<Map<String, Object>> productCharacteristics = (List<Map<String, Object>>) product.get("productCharacteristic");
+                List<Map<String, Object>> productCharacteristics = (List<Map<String, Object>>) product.get("productCharacteristic");
+
+                if (TARGET_PRODUCT_SPEC_ID.equals(productSpecId)) {
+                    // Fetch UNI Product Details
                     for (Map<String, Object> characteristic : productCharacteristics) {
                         String name = (String) characteristic.get("name");
                         String value = (String) characteristic.get("value");
@@ -106,31 +112,24 @@ public class FetchVariablesWorker {
                                 break;
                         }
                     }
-                }
-            }
-        }
-
-        if (productDetails.containsKey("NTURequired") && "Yes".equals(productDetails.get("NTURequired"))) {
-            for (Map<String, Object> shippingOrderItem : shippingOrderItems) {
-                Map<String, Object> shipment = (Map<String, Object>) shippingOrderItem.get("shipment");
-                List<Map<String, Object>> shipmentItems = (List<Map<String, Object>>) shipment.get("shipmentItem");
-                for (Map<String, Object> shipmentItem : shipmentItems) {
-                    Map<String, Object> product = (Map<String, Object>) shipmentItem.get("product");
-                    Map<String, Object> productSpecification = (Map<String, Object>) product.get("productSpecification");
-
-                    if (NTU_PRODUCT_SPEC_ID.equals(productSpecification.get("id"))) {
-                        List<Map<String, Object>> productCharacteristics = (List<Map<String, Object>>) product.get("productCharacteristic");
-                        for (Map<String, Object> characteristic : productCharacteristics) {
-                            if ("ntuSize".equals(characteristic.get("name"))) {
-                                ntuSize = Integer.parseInt((String) characteristic.get("value"));
-                            }
+                } else if (NTU_PRODUCT_SPEC_ID.equals(productSpecId)) {
+                    // Fetch NTU Size from NTU Product
+                    for (Map<String, Object> characteristic : productCharacteristics) {
+                        if ("ntuSize".equals(characteristic.get("name"))) {
+                            ntuSizeFromNTUProduct = Integer.parseInt((String) characteristic.get("value"));
                         }
                     }
                 }
             }
         }
 
+        // If NTU is required and NTU size was found in NTU product, update it
+        if ("Yes".equals(productDetails.get("ntuRequired")) && ntuSizeFromNTUProduct != null) {
+            ntuSize = ntuSizeFromNTUProduct;
+        }
+
         productDetails.put("ntuSize", ntuSize);
         return productDetails;
     }
+
 }
