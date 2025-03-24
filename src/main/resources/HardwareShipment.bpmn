@@ -92,7 +92,7 @@
     </bpmn:exclusiveGateway>
     <bpmn:sequenceFlow id="Flow_0a7v0u6" sourceRef="Gateway_0i9z25r" targetRef="Event_0scqbs0" />
     <bpmn:sequenceFlow id="Flow_1wcx4e4" sourceRef="Gateway_0ehrvbk" targetRef="Activity_1xpnx3q">
-      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=(networkElement = "" or distance= "" or ntuRequired= "" or  ntuSize ="" or uniPortCapacity = "" or uniInterfaceType ="" or stateOrProvince ="") or errorMessage != null</bpmn:conditionExpression>
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">=errorMessage != null</bpmn:conditionExpression>
     </bpmn:sequenceFlow>
     <bpmn:sequenceFlow id="Flow_1axn95k" sourceRef="Activity_1xpnx3q" targetRef="Gateway_0i9z25r" />
     <bpmn:scriptTask id="Activity_1xpnx3q">

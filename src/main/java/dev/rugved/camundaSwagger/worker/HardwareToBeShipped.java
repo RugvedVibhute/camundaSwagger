@@ -139,6 +139,10 @@ public class HardwareToBeShipped {
                 return "distance_ranges = '< 300' OR distance_ranges = '< 500' OR distance_ranges = '<10000'";
             } else if (numericDistance >= 300 && numericDistance < 500) {
                 return "distance_ranges = '< 500' OR distance_ranges = '<10000'";
+            } else if (numericDistance >=10000 && numericDistance <40000) {
+                return "distance_ranges = '>=10000 and <40000'";
+            } else if (numericDistance >=40000 && numericDistance <80000) {
+                return "distance_ranges = '>=40000 and <80000'";
             } else if (numericDistance < 10000) {
                 return "distance_ranges = '<10000'";
             } else {
