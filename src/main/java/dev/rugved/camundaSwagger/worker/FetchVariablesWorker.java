@@ -39,12 +39,19 @@ public class FetchVariablesWorker {
         } catch (Exception e) {
             logger.error("Error processing job variables", e);
             Map<String, Object> errorOutput = Map.of("errorMessage", e.getMessage(), "errorCode", "CAM-" + job.getKey());
-            client.newFailCommand(job.getKey()).retries(0).variables(errorOutput).send().join();
+            client.newCompleteCommand(job.getKey())
+                    .variables(errorOutput)
+                    .send()
+                    .join();
         }
     }
 
     private String extractStateOrProvince(Map<String, Object> variables) {
+
         List<Map<String, Object>> relatedParty = (List<Map<String, Object>>) variables.get("relatedParty");
+        if (relatedParty == null || relatedParty.isEmpty()) {
+            throw new IllegalArgumentException("Missing or invalid input: 'relatedParty' is required and must be a list.");
+        }
         for (Map<String, Object> party : relatedParty) {
             if ("siteAddress".equals(party.get("role"))) {
                 List<Map<String, Object>> contactMedium = (List<Map<String, Object>>) party.get("contactMedium");
