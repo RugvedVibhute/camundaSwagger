@@ -49,6 +49,7 @@ public class ShipToAddressWorker {
                 throw new IllegalArgumentException("No otherAddresses details found");
             }
 
+            // Create output map with address information
             output.put(SHIP_TO_ADDRESSES, addresses.stream()
                     .map(address -> Map.of(
                             SHIP_TO_ADDRESS_ID, address.getShipToAddressId(),
