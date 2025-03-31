@@ -29,10 +29,11 @@ public class UniWithOrWithoutNtuRepository {
         query.setParameter(DISTANCE_RANGES, distanceRanges);
         query.setParameter(NTU_REQUIRED, ntuRequired);
         query.setParameter(NTU_SIZE, ntuSize);
-        query.setParameter(VENDOR_TYPE, "%" + vendorType + "%"); // Using LIKE operator
+        query.setParameter(VENDOR_TYPE, "%" + vendorType + "%");
         query.setParameter(UNI_PORT_CAPACITY, uniPortCapacity);
         query.setParameter(UNI_INTERFACE_TYPE, uniInterfaceType);
 
-        return query.getSingleResult();
+        // Change from getSingleResult() to getResultList().stream().findFirst().orElse(null)
+        return query.getResultList().stream().findFirst().orElse(null);
     }
 }

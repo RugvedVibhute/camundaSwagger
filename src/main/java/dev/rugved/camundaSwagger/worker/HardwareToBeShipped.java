@@ -80,7 +80,7 @@ public class HardwareToBeShipped {
 
         String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, "0", vendorType, uniPortCapacity, uniInterfaceType);
         if (aaUniSfp == null) {
-            throw new IllegalArgumentException("No aaUniSfp found for distance: " + distanceRanges +
+            throw new IllegalArgumentException("No aaUniSfp found for " + distanceRanges +
                     ", vendorType: " + vendorType + ", uniPortCapacity: " + uniPortCapacity + ", uniInterfaceType: " + uniInterfaceType);
         }
 

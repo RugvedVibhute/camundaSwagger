@@ -27,6 +27,7 @@ public class UniWithOrWithoutNtuServiceImpl implements UniWithOrWithoutNtuServic
         logger.info("vendorType: {}" , vendorType);
         logger.info("uniPortCapacity: {}" , uniPortCapacity);
         logger.info("uniInterfaceType: {}" , uniInterfaceType);
+
         return repository.findAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);
     }
 }
