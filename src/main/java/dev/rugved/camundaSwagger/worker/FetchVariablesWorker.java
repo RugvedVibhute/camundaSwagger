@@ -12,11 +12,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static dev.rugved.camundaSwagger.util.Constants.*;
+
 @Component
 public class FetchVariablesWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(FetchVariablesWorker.class);
-    private static final String JOB_TYPE_FETCHVARIABLES = "fetchVariables";
     private static final String TARGET_PRODUCT_SPEC_ID = "601c8c38-07c6-4deb-b473-f15cd843b712";
     private static final String NTU_PRODUCT_SPEC_ID = "84b0d8a2-1b90-47ab-b8d8-f119ea330bef";
 

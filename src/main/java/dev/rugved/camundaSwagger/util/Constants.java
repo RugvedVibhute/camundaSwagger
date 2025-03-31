@@ -28,7 +28,7 @@ public class Constants {
     public static final String ADDITIONAL_PARTNER_ADDRESS_ID = "additionalPartnerAddressId";
     public static final String PRODUCT_SPECIFICATION = "productSpecification";
 
-    // HardwareToBeShipped Constants
+    // HardwareToBeShippedWorker Constants
     public static final String NETWORK_ELEMENT = "networkElement";
 
     public static final String DISTANCE = "distance";

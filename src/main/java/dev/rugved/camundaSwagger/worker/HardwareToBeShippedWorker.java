@@ -17,9 +17,9 @@ import java.util.Optional;
 import static dev.rugved.camundaSwagger.util.Constants.*;
 
 @Component
-public class HardwareToBeShipped {
+public class HardwareToBeShippedWorker {
 
-    private static final Logger logger = LoggerFactory.getLogger(HardwareToBeShipped.class);
+    private static final Logger logger = LoggerFactory.getLogger(HardwareToBeShippedWorker.class);
 
     private final NetworkElementTypeService networkElementService;
     private final UniWithOrWithoutNtuService uniService;
@@ -28,12 +28,12 @@ public class HardwareToBeShipped {
     private final NtuTypeService ntuTypeService;
     private final ErrorHandlerService errorHandlerService;
 
-    public HardwareToBeShipped(NetworkElementTypeService networkElementService,
-                               UniWithOrWithoutNtuService uniService,
-                               SkuIdService skuIdService,
-                               NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService,
-                               NtuTypeService ntuTypeService,
-                               ErrorHandlerService errorHandlerService) {
+    public HardwareToBeShippedWorker(NetworkElementTypeService networkElementService,
+                                     UniWithOrWithoutNtuService uniService,
+                                     SkuIdService skuIdService,
+                                     NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService,
+                                     NtuTypeService ntuTypeService,
+                                     ErrorHandlerService errorHandlerService) {
         this.networkElementService = networkElementService;
         this.uniService = uniService;
         this.skuIdService = skuIdService;
@@ -54,7 +54,7 @@ public class HardwareToBeShipped {
             String uniPortCapacity = job.getVariable(UNI_PORT_CAPACITY).toString();
             String uniInterfaceType = job.getVariable(UNI_INTERFACE_TYPE).toString();
 
-            logger.info("Processing HardwareToBeShipped job | networkElement: {}, distance: {}, ntuRequired: {}",
+            logger.info("Processing HardwareToBeShippedWorker job | networkElement: {}, distance: {}, ntuRequired: {}",
                     networkElement, distance, ntuRequired);
 
             if ("No".equalsIgnoreCase(ntuRequired)) {
