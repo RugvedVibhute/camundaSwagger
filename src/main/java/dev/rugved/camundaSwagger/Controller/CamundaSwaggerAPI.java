@@ -8,7 +8,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
-
 
 @RestController
 @RequestMapping("/process")
@@ -46,21 +44,38 @@ public class CamundaSwaggerAPI implements CommandLineRunner {
 
             // Log and return success response
             long processInstanceKey = processInstanceEvent.getProcessInstanceKey();
-            LOG.info("Process instance created: "+ processInstanceKey);
+            LOG.info("Process instance created: " + processInstanceKey);
 
             return ResponseEntity.ok(
                     Map.of("message", "Process instance started successfully",
                             "processInstanceKey", processInstanceKey));
 
+        } catch (Exception e) {
+            // Let the GlobalExceptionHandler handle all exceptions
+            throw handleZeebeException(e);
         }
-        catch (Exception e) {
+    }
 
+    /**
+     * Helper method to convert Zeebe exceptions to our custom exceptions
+     */
+    private RuntimeException handleZeebeException(Exception e) {
+        String errorMessage = e.getMessage();
+        LOG.error("Error in Zeebe operation: " + errorMessage, e);
 
-            // Log and return error response
-            LOG.error("Error starting process instance"+ e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to start process instance", "details", e.getMessage()));
+        if (errorMessage.contains("NOT_FOUND") || errorMessage.contains("not found")) {
+            return new dev.rugved.camundaSwagger.exception.ResourceNotFoundException(errorMessage);
         }
+
+        if (errorMessage.contains("INVALID_ARGUMENT")) {
+            return new dev.rugved.camundaSwagger.exception.BadRequestException(errorMessage);
+        }
+
+        if (errorMessage.contains("PERMISSION_DENIED") || errorMessage.contains("permission denied")) {
+            return new dev.rugved.camundaSwagger.exception.ForbiddenException(errorMessage);
+        }
+
+        return new dev.rugved.camundaSwagger.exception.ServiceUnavailableException(errorMessage);
     }
 
     @Override
@@ -68,4 +83,3 @@ public class CamundaSwaggerAPI implements CommandLineRunner {
         LOG.info("CamundaSwaggerAPI application has started.");
     }
 }
-

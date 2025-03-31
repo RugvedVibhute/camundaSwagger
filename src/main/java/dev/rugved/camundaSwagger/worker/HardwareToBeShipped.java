@@ -25,15 +25,17 @@ public class HardwareToBeShipped {
     private final SkuIdService skuIdService;
     private final NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService;
     private final NtuTypeService ntuTypeService;
+    private final ErrorHandlerService errorHandlerService;
 
     public HardwareToBeShipped(NetworkElementTypeService service, UniWithOrWithoutNtuService uniService,
                                SkuIdService skuIdService, NtuNniSfpOrAaSfpService ntuNniSfpOrAaSfpService,
-                               NtuTypeService ntuTypeService) {
+                               NtuTypeService ntuTypeService, ErrorHandlerService errorHandlerService) {
         this.service = service;
         this.uniService = uniService;
         this.skuIdService = skuIdService;
         this.ntuNniSfpOrAaSfpService = ntuNniSfpOrAaSfpService;
         this.ntuTypeService = ntuTypeService;
+        this.errorHandlerService = errorHandlerService;
     }
 
     @JobWorker(type = JOB_TYPE_HARDWARE_TO_BE_SHIPPED)
@@ -62,9 +64,7 @@ public class HardwareToBeShipped {
             logger.info("Job completed successfully with variables: {}", output);
 
         } catch (Exception e) {
-            logger.error("Error processing HardwareToBeShipped job: {}", e.getMessage(), e);
-            output.put(ERROR_MESSAGE, e.getMessage());
-
+            output = errorHandlerService.handleError(e, JOB_TYPE_HARDWARE_TO_BE_SHIPPED);
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
         }
     }

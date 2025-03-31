@@ -12,6 +12,8 @@ public class Constants {
     public static final String CUSTOMER_TYPE = "customerType";
     public static final String CUSTOMER_SUBTYPE = "customerSubType";
     public static final String ERROR_MESSAGE = "errorMessage";
+    public static final String ERROR_CODE = "errorCode";
+    public static final String ERROR_DETAILS = "errorDetails";
 
     public static final String SHIP_TO_ADDRESSES = "shipToAddresses";
     public static final String SHIP_TO_ADDRESS_ID = "shipToAddressId";
