@@ -33,9 +33,11 @@ public class FetchVariablesWorker {
 
             String stateOrProvince = extractStateOrProvince(variables);
             String installationMethod = extractInstallationMethod(variables);
+            String correlationId = extractCorrelationId(variables);
             Map<String, Object> productDetails = extractProductDetails(variables);
 
             Map<String, Object> output = new HashMap<>();
+            output.put("correlationId", correlationId);
             output.put("stateOrProvince", stateOrProvince);
             output.put("installationMethod", installationMethod);
             output.putAll(productDetails);
@@ -72,6 +74,19 @@ public class FetchVariablesWorker {
             }
         }
         throw new IllegalArgumentException("Missing or invalid input: 'siteAddress' role not found in relatedParty.");
+    }
+
+    private String extractCorrelationId(Map<String, Object> variables) {
+        List<Map<String, Object>> characteristics = (List<Map<String, Object>>) variables.get("shippingOrderCharacteristic");
+        if (characteristics == null || characteristics.isEmpty()) {
+            throw new IllegalArgumentException("Missing or invalid input: 'shippingOrderCharacteristic' is required and must be a list.");
+        }
+        for (Map<String, Object> characteristic : characteristics) {
+            if ("CorrelationId".equals(characteristic.get("name"))) {
+                return (String) characteristic.get("value");
+            }
+        }
+        throw new IllegalArgumentException("Missing or invalid input: 'InstallationMethod' characteristic not found.");
     }
 
     private String extractInstallationMethod(Map<String, Object> variables) {

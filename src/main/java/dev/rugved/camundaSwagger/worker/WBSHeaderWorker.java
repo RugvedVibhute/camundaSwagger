@@ -9,10 +9,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static dev.rugved.camundaSwagger.util.Constants.*;
 
+/**
+ * Worker for handling WBS Header related job tasks.
+ */
 @Component
 public class WBSHeaderWorker {
 
@@ -27,7 +31,8 @@ public class WBSHeaderWorker {
 
     @JobWorker(type = JOB_TYPE_FETCH_WBS_DETAILS)
     public void fetchWBSDetails(final JobClient client, final ActivatedJob job) {
-        Map<String, Object> output;
+        Map<String, Object> output = new HashMap<>();
+
         try {
             String stateOrProvince = job.getVariable(STATE_OR_PROVINCE).toString();
             logger.info("Processing fetchWBSDetails job | StateOrProvince: {}", stateOrProvince);
@@ -37,16 +42,16 @@ public class WBSHeaderWorker {
                 throw new IllegalArgumentException("No WBS Header details found for state: " + stateOrProvince);
             }
 
-            output = Map.of(
-                    WBS_HEADER, wbsHeaderDetails.getWbsHeader(),
-                    CUSTOMER_TYPE, wbsHeaderDetails.getCustomerType(),
-                    CUSTOMER_SUBTYPE, wbsHeaderDetails.getCustomerSubType()
-            );
+            output.put(WBS_HEADER, wbsHeaderDetails.getWbsHeader());
+            output.put(CUSTOMER_TYPE, wbsHeaderDetails.getCustomerType());
+            output.put(CUSTOMER_SUBTYPE, wbsHeaderDetails.getCustomerSubType());
+            output.put(ERROR_MESSAGE, null);
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
             logger.info("fetchWBSDetails job completed successfully | Variables: {}", output);
 
         } catch (Exception e) {
+            logger.error("Error processing fetchWBSDetails job: {}", e.getMessage(), e);
             output = errorHandlerService.handleError(e, JOB_TYPE_FETCH_WBS_DETAILS);
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
         }
