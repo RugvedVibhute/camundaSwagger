@@ -17,8 +17,9 @@ public class NetworkElementTypeServiceImpl implements NetworkElementTypeService 
 
     @Override
     public String getVendorType(String networkElement) {
+
         return repository.findByNetworkElement(networkElement)
                 .map(NetworkElementType::getVendorType)
-                .orElseThrow(() -> new RuntimeException("Network Element not found"));
+                .orElse(null); // Return null instead of throwing exception
     }
 }

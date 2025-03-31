@@ -17,7 +17,6 @@ public class SkuIdServiceImpl implements SkuIdService {
 
     @Override
     public SkuId getSkuIdByAaUniSfp(String aaUniSfp) {
-        return repository.findByAaUniSfp(aaUniSfp)
-                .orElseThrow(() -> new RuntimeException("SkuId not found for aaUniSfp: " + aaUniSfp));
+        return repository.findByAaUniSfp(aaUniSfp).orElse(null);
     }
 }

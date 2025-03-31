@@ -1,6 +1,7 @@
 package dev.rugved.camundaSwagger.worker;
 
 import dev.rugved.camundaSwagger.service.WBSHeaderService;
+import dev.rugved.camundaSwagger.service.ErrorHandlerService;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -17,13 +18,16 @@ public class WBSHeaderWorker {
 
     private static final Logger logger = LoggerFactory.getLogger(WBSHeaderWorker.class);
     private final WBSHeaderService service;
+    private final ErrorHandlerService errorHandlerService;
 
-    public WBSHeaderWorker(WBSHeaderService service) {
+    public WBSHeaderWorker(WBSHeaderService service, ErrorHandlerService errorHandlerService) {
         this.service = service;
+        this.errorHandlerService = errorHandlerService;
     }
 
     @JobWorker(type = JOB_TYPE_FETCH_WBS_DETAILS)
     public void fetchWBSDetails(final JobClient client, final ActivatedJob job) {
+        Map<String, Object> output;
         try {
             String stateOrProvince = job.getVariable(STATE_OR_PROVINCE).toString();
             logger.info("Processing fetchWBSDetails job | StateOrProvince: {}", stateOrProvince);
@@ -33,7 +37,7 @@ public class WBSHeaderWorker {
                 throw new IllegalArgumentException("No WBS Header details found for state: " + stateOrProvince);
             }
 
-            Map<String, Object> output = Map.of(
+            output = Map.of(
                     WBS_HEADER, wbsHeaderDetails.getWbsHeader(),
                     CUSTOMER_TYPE, wbsHeaderDetails.getCustomerType(),
                     CUSTOMER_SUBTYPE, wbsHeaderDetails.getCustomerSubType()
@@ -43,10 +47,8 @@ public class WBSHeaderWorker {
             logger.info("fetchWBSDetails job completed successfully | Variables: {}", output);
 
         } catch (Exception e) {
-            logger.error("Error processing fetchWBSDetails job: {}", e.getMessage(), e);
-
-            Map<String, Object> errorOutput = Map.of(ERROR_MESSAGE, e.getMessage());
-            client.newCompleteCommand(job.getKey()).variables(errorOutput).send().join();
+            output = errorHandlerService.handleError(e, JOB_TYPE_FETCH_WBS_DETAILS);
+            client.newCompleteCommand(job.getKey()).variables(output).send().join();
         }
     }
 }

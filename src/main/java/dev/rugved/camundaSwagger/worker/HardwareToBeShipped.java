@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 import static dev.rugved.camundaSwagger.util.Constants.*;
 
@@ -111,14 +112,30 @@ public class HardwareToBeShipped {
         }
 
         String ntuNniSfp = ntuNniSfpOrAaSfpService.getNtuNniSfp(ntuSize, distanceRanges, vendorType);
-        String ntuNniSfpSkuIdValue = skuIdService.getSkuIdByAaUniSfp(ntuNniSfp).getAaUniSfpSkuId();
+        if (ntuNniSfp == null) {
+            throw new IllegalArgumentException("No NTU NNI SFP found for NTU Size: " + ntuSize + distanceRanges + "Vendor Type" + vendorType);
+        }
+        String ntuNniSfpSkuIdValue = Optional.ofNullable(skuIdService.getSkuIdByAaUniSfp(ntuNniSfp))
+                .map(SkuId::getAaUniSfpSkuId)
+                .orElseThrow(() -> new IllegalArgumentException("No SkuId found for NTU NNI SFP: " + ntuNniSfp));
+
 
         String aaSfp = ntuNniSfpOrAaSfpService.getAaSfp(ntuSize, distanceRanges, vendorType);
-        String aaSfpSkuIdValue = skuIdService.getSkuIdByAaUniSfp(aaSfp).getAaUniSfpSkuId();
+        if (aaSfp == null) {
+            throw new IllegalArgumentException("No AA SFP found for NTU Size: " + ntuSize + ", Distance Ranges: " + distanceRanges + ", Vendor Type: " + vendorType);
+        }
+        String aaSfpSkuIdValue = Optional.ofNullable(skuIdService.getSkuIdByAaUniSfp(aaSfp))
+                .map(SkuId::getAaUniSfpSkuId)
+                .orElseThrow(() -> new IllegalArgumentException("No SkuId found for AA SFP: " + aaSfp));
 
         String aaUniSfp = uniService.getAaUniSfp(distanceRanges, ntuRequired, ntuSize, vendorType, uniPortCapacity, uniInterfaceType);
-        String skuIdValue = skuIdService.getSkuIdByAaUniSfp(aaUniSfp).getAaUniSfpSkuId();
+        if (aaUniSfp == null) {
+            throw new IllegalArgumentException("No AA UNI SFP found for given parameters.");
+        }
 
+        String skuIdValue = Optional.ofNullable(skuIdService.getSkuIdByAaUniSfp(aaUniSfp))
+                .map(SkuId::getAaUniSfpSkuId)
+                .orElseThrow(() -> new IllegalArgumentException("No SkuId found for AA UNI SFP: " + aaUniSfp));
         output.put(NTU_TYPE, ntuType.getNtuType());
         output.put(NTU_TYPE_SKU_ID, ntuTypeSkuIdValue);
         output.put(NTU_NNI_SFP, ntuNniSfp);
@@ -129,6 +146,7 @@ public class HardwareToBeShipped {
         output.put(SKU_ID, skuIdValue);
         output.put(NTU_REQUIRED, ntuRequired);
     }
+
     private String mapDistanceToDatabaseValue(String distance) {
         try {
             int numericDistance = Integer.parseInt(distance.trim());
@@ -139,9 +157,9 @@ public class HardwareToBeShipped {
                 return "distance_ranges = '< 300' OR distance_ranges = '< 500' OR distance_ranges = '<10000'";
             } else if (numericDistance >= 300 && numericDistance < 500) {
                 return "distance_ranges = '< 500' OR distance_ranges = '<10000'";
-            } else if (numericDistance >=10000 && numericDistance <40000) {
+            } else if (numericDistance >= 10000 && numericDistance < 40000) {
                 return "distance_ranges = '>=10000 and <40000'";
-            } else if (numericDistance >=40000 && numericDistance <80000) {
+            } else if (numericDistance >= 40000 && numericDistance < 80000) {
                 return "distance_ranges = '>=40000 and <80000'";
             } else if (numericDistance < 10000) {
                 return "distance_ranges = '<10000'";
