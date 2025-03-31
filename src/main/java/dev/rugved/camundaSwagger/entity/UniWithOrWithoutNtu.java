@@ -1,33 +1,49 @@
 package dev.rugved.camundaSwagger.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+/**
+ * Entity representing a UNI configuration with or without NTU.
+ */
 @Entity
-@Table(name = "uni_with_or_without_ntu")
+@Table(name = "\"uni_with_or_without_ntu\"", schema = "public")
 public class UniWithOrWithoutNtu {
 
     @Id
+    @Column(name = "sr_no")
     private Long srNo;
 
+    @Column(name = "distance_ranges")
     private String distanceRanges;
+
+    @Column(name = "ntu_required")
     private String ntuRequired;
+
+    @Column(name = "ntu_size")
     private String ntuSize;
+
+    @Column(name = "vendor_type")
     private String vendorType;
+
+    @Column(name = "uni_port_capacity")
     private String uniPortCapacity;
+
+    @Column(name = "uni_interface_type")
     private String uniInterfaceType;
+
+    @Column(name = "aa_uni_sfp")
     private String aaUniSfp;
 
     // Getters and Setters
-
-
-    public Long getId() {
+    public Long getSrNo() {
         return srNo;
     }
 
-    public void setId(Long id) {
-        this.srNo = id;
+    public void setSrNo(Long srNo) {
+        this.srNo = srNo;
     }
 
     public String getDistanceRanges() {
@@ -85,5 +101,18 @@ public class UniWithOrWithoutNtu {
     public void setAaUniSfp(String aaUniSfp) {
         this.aaUniSfp = aaUniSfp;
     }
-}
 
+    @Override
+    public String toString() {
+        return "UniWithOrWithoutNtu{" +
+                "srNo=" + srNo +
+                ", distanceRanges='" + distanceRanges + '\'' +
+                ", ntuRequired='" + ntuRequired + '\'' +
+                ", ntuSize='" + ntuSize + '\'' +
+                ", vendorType='" + vendorType + '\'' +
+                ", uniPortCapacity='" + uniPortCapacity + '\'' +
+                ", uniInterfaceType='" + uniInterfaceType + '\'' +
+                ", aaUniSfp='" + aaUniSfp + '\'' +
+                '}';
+    }
+}

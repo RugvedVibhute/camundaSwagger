@@ -2,6 +2,9 @@ package dev.rugved.camundaSwagger.entity;
 
 import jakarta.persistence.*;
 
+/**
+ * Entity representing a network element type and its associated vendor type.
+ */
 @Entity
 @Table(name = "\"network_element_type\"", schema = "public")
 public class NetworkElementType {
@@ -40,5 +43,13 @@ public class NetworkElementType {
     public void setVendorType(String vendorType) {
         this.vendorType = vendorType;
     }
-}
 
+    @Override
+    public String toString() {
+        return "NetworkElementType{" +
+                "srNo=" + srNo +
+                ", networkElement='" + networkElement + '\'' +
+                ", vendorType='" + vendorType + '\'' +
+                '}';
+    }
+}
