@@ -1,6 +1,7 @@
 package dev.rugved.camundaSwagger.worker;
 
 import dev.rugved.camundaSwagger.service.ErrorHandlerService;
+import dev.rugved.camundaSwagger.util.LoggingUtil;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -13,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import static dev.rugved.camundaSwagger.util.Constants.*;
+import static dev.rugved.camundaSwagger.util.Constants.JOB_TYPE_FETCHVARIABLES;
 
 /**
  * Worker responsible for extracting and processing variables from the process instance.
@@ -50,9 +51,10 @@ public class FetchVariablesWorker {
             // First try to extract the correlation ID, even if other processing fails
             try {
                 correlationId = extractCorrelationId(variables);
-                logger.debug("Successfully extracted correlationId: {}", correlationId);
+                // Only log correlation ID without additional sensitive data
+                logger.debug("Successfully extracted correlationId for job: {}", job.getKey());
             } catch (Exception e) {
-                logger.warn("Could not extract correlationId: {}", e.getMessage());
+                logger.warn("Could not extract correlationId for job: {}: {}", job.getKey(), e.getMessage());
                 // Continue processing - we'll handle missing correlationId in the outer catch block
             }
 
@@ -72,7 +74,15 @@ public class FetchVariablesWorker {
             output.put("installationMethod", installationMethod);
             output.putAll(productDetails);
 
-            logger.info("Successfully extracted variables: {}", output);
+            // Use safe logging to prevent exposing sensitive data
+            Map<String, Object> loggingMap = new HashMap<>();
+            loggingMap.put("jobKey", job.getKey());
+            loggingMap.put("correlationId", "*** exists ***");
+            loggingMap.put("installationMethod", installationMethod);
+            // Only mention fields exist without showing values
+            loggingMap.put("productFields", String.join(", ", productDetails.keySet()));
+
+            LoggingUtil.logSafely(logger, "info", "Successfully extracted variables", loggingMap);
 
             // Complete the job with extracted variables
             client.newCompleteCommand(job.getKey())
@@ -83,7 +93,8 @@ public class FetchVariablesWorker {
             logger.debug("Completed fetchVariables job with key: {}", job.getKey());
 
         } catch (Exception e) {
-            logger.error("Error processing {} job: {}", JOB_TYPE_FETCHVARIABLES, e.getMessage(), e);
+            String safeErrorMessage = LoggingUtil.sanitizeMessage(e.getMessage());
+            logger.error("Error processing {} job: {}", JOB_TYPE_FETCHVARIABLES, safeErrorMessage);
 
             // Handle error and complete the job with error information
             Map<String, Object> errorOutput = errorHandlerService.handleError(e, JOB_TYPE_FETCHVARIABLES);
@@ -91,7 +102,7 @@ public class FetchVariablesWorker {
             // Always include correlationId in the error response if available
             if (correlationId != null) {
                 errorOutput.put("correlationId", correlationId);
-                logger.debug("Adding correlationId to error response: {}", correlationId);
+                logger.debug("Adding correlationId to error response for job: {}", job.getKey());
             } else {
                 // Try one more time to extract correlation ID directly from variables
                 try {
@@ -103,14 +114,15 @@ public class FetchVariablesWorker {
                                 correlationId = (String) characteristic.get("value");
                                 if (correlationId != null) {
                                     errorOutput.put("correlationId", correlationId);
-                                    logger.debug("Found correlationId in final attempt: {}", correlationId);
+                                    logger.debug("Found correlationId in final attempt for job: {}", job.getKey());
                                     break;
                                 }
                             }
                         }
                     }
                 } catch (Exception ex) {
-                    logger.warn("Final attempt to extract correlationId failed: {}", ex.getMessage());
+                    logger.warn("Final attempt to extract correlationId failed for job: {}: {}",
+                            job.getKey(), LoggingUtil.sanitizeMessage(ex.getMessage()));
                 }
             }
 
