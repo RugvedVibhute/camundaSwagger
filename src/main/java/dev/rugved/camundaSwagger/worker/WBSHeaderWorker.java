@@ -2,7 +2,6 @@ package dev.rugved.camundaSwagger.worker;
 
 import dev.rugved.camundaSwagger.service.WBSHeaderService;
 import dev.rugved.camundaSwagger.service.ErrorHandlerService;
-import dev.rugved.camundaSwagger.util.LoggingUtil;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -34,16 +33,12 @@ public class WBSHeaderWorker {
     public void fetchWBSDetails(final JobClient client, final ActivatedJob job) {
         Map<String, Object> output = new HashMap<>();
 
-        // Create safe logging map
-        Map<String, Object> safeLogMap = new HashMap<>();
-        safeLogMap.put("jobKey", job.getKey());
-        safeLogMap.put("jobType", JOB_TYPE_FETCH_WBS_DETAILS);
-
         try {
             String stateOrProvince = job.getVariable(STATE_OR_PROVINCE).toString();
 
-            // Log without exposing PII
-            LoggingUtil.logSafely(logger, "info", "Processing fetchWBSDetails job", safeLogMap);
+            // Log job processing without exposing the actual state/province
+            logger.info("Processing fetchWBSDetails job - jobKey: {}, jobType: {}",
+                    job.getKey(), JOB_TYPE_FETCH_WBS_DETAILS);
 
             var wbsHeaderDetails = service.getWBSHeaderDetailsByState(stateOrProvince);
             if (wbsHeaderDetails == null) {
@@ -51,40 +46,33 @@ public class WBSHeaderWorker {
             }
 
             // Log successful retrieval without exposing actual data
-            Map<String, Object> resultMap = new HashMap<>();
-            resultMap.put("jobKey", job.getKey());
-            resultMap.put("wbsHeaderFound", true);
-            resultMap.put("customerTypeAvailable", wbsHeaderDetails.getCustomerType() != null);
-            resultMap.put("customerSubTypeAvailable", wbsHeaderDetails.getCustomerSubType() != null);
-            LoggingUtil.logSafely(logger, "debug", "Retrieved WBS header details", resultMap);
+            logger.debug("Retrieved WBS header details - jobKey: {}, wbsHeaderFound: true, " +
+                            "customerTypeAvailable: {}, customerSubTypeAvailable: {}",
+                    job.getKey(),
+                    wbsHeaderDetails.getCustomerType() != null,
+                    wbsHeaderDetails.getCustomerSubType() != null);
 
             output.put(WBS_HEADER, wbsHeaderDetails.getWbsHeader());
             output.put(CUSTOMER_TYPE, wbsHeaderDetails.getCustomerType());
             output.put(CUSTOMER_SUBTYPE, wbsHeaderDetails.getCustomerSubType());
             output.put(ERROR_MESSAGE, null);
 
-            // Log completion without exposing data
-            Map<String, Object> completionMap = new HashMap<>();
-            completionMap.put("jobKey", job.getKey());
-            completionMap.put("status", "completed");
-            completionMap.put("outputSize", output.size());
+            // Log completion
+            logger.info("fetchWBSDetails job completed successfully - jobKey: {}, status: completed, outputSize: {}",
+                    job.getKey(), output.size());
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            LoggingUtil.logSafely(logger, "info", "fetchWBSDetails job completed successfully", completionMap);
 
         } catch (Exception e) {
-            // Use sanitized error logging
-            String safeErrorMessage = LoggingUtil.sanitizeMessage(e.getMessage());
-            logger.error("Error processing fetchWBSDetails job: {}", safeErrorMessage);
+            // Log error
+            logger.error("Error processing fetchWBSDetails job: {}", e.getMessage());
 
             output = errorHandlerService.handleError(e, JOB_TYPE_FETCH_WBS_DETAILS);
 
-            Map<String, Object> errorLogMap = new HashMap<>();
-            errorLogMap.put("jobKey", job.getKey());
-            errorLogMap.put("errorCode", output.containsKey(ERROR_CODE) ? output.get(ERROR_CODE) : "UNKNOWN");
+            logger.error("fetchWBSDetails job completed with error - jobKey: {}, errorCode: {}",
+                    job.getKey(), output.containsKey(ERROR_CODE) ? output.get(ERROR_CODE) : "UNKNOWN");
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            LoggingUtil.logSafely(logger, "error", "fetchWBSDetails job completed with error", errorLogMap);
         }
     }
 }

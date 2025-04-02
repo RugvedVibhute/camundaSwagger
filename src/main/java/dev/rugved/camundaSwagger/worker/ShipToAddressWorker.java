@@ -4,7 +4,6 @@ import dev.rugved.camundaSwagger.entity.OtherAddress;
 import dev.rugved.camundaSwagger.entity.ShipToAddress;
 import dev.rugved.camundaSwagger.service.ShipToAddressService;
 import dev.rugved.camundaSwagger.service.ErrorHandlerService;
-import dev.rugved.camundaSwagger.util.LoggingUtil;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -35,26 +34,19 @@ public class ShipToAddressWorker {
     public void shipToAddress(final JobClient client, final ActivatedJob job) {
         Map<String, Object> output = new HashMap<>();
 
-        // Create safe logging map
-        Map<String, Object> safeLogMap = new HashMap<>();
-        safeLogMap.put("jobKey", job.getKey());
-        safeLogMap.put("jobType", JOB_TYPE_SHIP_TO_ADDRESS);
-
         try {
             String stateOrProvince = job.getVariable(STATE_OR_PROVINCE).toString();
 
-            // Don't log PII like state/province directly
-            LoggingUtil.logSafely(logger, "info", "Processing shipToAddress job", safeLogMap);
+            // Log job processing without exposing the actual state/province
+            logger.info("Processing shipToAddress job - jobKey: {}, jobType: {}",
+                    job.getKey(), JOB_TYPE_SHIP_TO_ADDRESS);
 
             List<ShipToAddress> addresses = shipToAddressService.getShipToAddressesByState(stateOrProvince);
             List<OtherAddress> otherAddresses = shipToAddressService.getOtherAddresses();
 
-            // Log counts without exposing actual addresses
-            Map<String, Object> resultCounts = new HashMap<>();
-            resultCounts.put("jobKey", job.getKey());
-            resultCounts.put("addressesFound", addresses.size());
-            resultCounts.put("otherAddressesFound", otherAddresses.size());
-            LoggingUtil.logSafely(logger, "debug", "Retrieved addresses", resultCounts);
+            // Log address counts
+            logger.debug("Retrieved addresses - jobKey: {}, addressesFound: {}, otherAddressesFound: {}",
+                    job.getKey(), addresses.size(), otherAddresses.size());
 
             if (addresses.isEmpty()) {
                 throw new IllegalArgumentException("No shipToAddresses details found for state: " + stateOrProvince);
@@ -85,28 +77,22 @@ public class ShipToAddressWorker {
 
             output.put(ERROR_MESSAGE, null);
 
-            // Log successful completion without exposing PII
-            Map<String, Object> completionMap = new HashMap<>();
-            completionMap.put("jobKey", job.getKey());
-            completionMap.put("status", "completed");
-            completionMap.put("outputSize", output.size());
+            // Log successful completion
+            logger.info("shipToAddress job completed successfully - jobKey: {}, status: completed, outputSize: {}",
+                    job.getKey(), output.size());
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            LoggingUtil.logSafely(logger, "info", "shipToAddress job completed successfully", completionMap);
 
         } catch (Exception e) {
-            // Use sanitized error logging
-            String safeErrorMessage = LoggingUtil.sanitizeMessage(e.getMessage());
-            logger.error("Error processing shipToAddress job: {}", safeErrorMessage);
+            // Log error with sanitized message
+            logger.error("Error processing shipToAddress job: {}", e.getMessage());
 
             output = errorHandlerService.handleError(e, JOB_TYPE_SHIP_TO_ADDRESS);
 
-            Map<String, Object> errorLogMap = new HashMap<>();
-            errorLogMap.put("jobKey", job.getKey());
-            errorLogMap.put("errorCode", output.containsKey(ERROR_CODE) ? output.get(ERROR_CODE) : "UNKNOWN");
+            logger.error("shipToAddress job completed with error - jobKey: {}, errorCode: {}",
+                    job.getKey(), output.containsKey(ERROR_CODE) ? output.get(ERROR_CODE) : "UNKNOWN");
 
             client.newCompleteCommand(job.getKey()).variables(output).send().join();
-            LoggingUtil.logSafely(logger, "error", "shipToAddress job completed with error", errorLogMap);
         }
     }
 }

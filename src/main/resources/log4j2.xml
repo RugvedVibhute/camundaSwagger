@@ -2,12 +2,14 @@
 <Configuration status="INFO">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern='[%-5level] %d{yyyy-MMM-dd HH:mm:ss.SSS} $${env:HOSTNAME} [%t] %C - %replace{%m}{(?i)("emailAddress"|"postCode"|"phoneNumber"|"stateOrProvince"|"street2"|"street1"|"city"|"name"|"id"|"value"|"mobile"|"country"|"firstName"|"lastName"|"formattedName"|"givenName"|"fullName"|"familyName"|"preferredGivenName"|"location"|"customer"|"account"|"user"|"gender"|"dateOfBirth"|"email"|"address"|"credit"|"card"|"passport"|"medicare"|"drivers"|"licence")\s*:\s*(?:"[^"]*"|\[.*?\])}{$1: "*** *** ***"}%n'/>
+            <!-- First replace JSON-style fields and values -->
+            <PatternLayout pattern='[%-5level] %d{yyyy-MMM-dd HH:mm:ss.SSS} $${env:HOSTNAME} [%t] %C - %replace{%replace{%m}{(?i)("emailAddress"|"postCode"|"phoneNumber"|"street2"|"street1"|"city"|"name"|"mobile"|"country"|"firstName"|"lastName"|"formattedName"|"givenName"|"fullName"|"familyName"|"preferredGivenName"|"location"|"customer"|"account"|"user"|"gender"|"dateOfBirth"|"email"|"address"|"credit"|"card"|"passport"|"medicare"|"drivers"|"licence")\s*:\s*(?:"[^"]*"|\[.*?\])}{$1: "*** MASKED ***"}}{(?i)\b(?:state|province|stateOrProvince)(?:\s*|:)\s*[A-Z]{2}\b}{state: "*** MASKED ***"}%n'/>
         </Console>
         <!-- File appender for persistent logging -->
         <RollingFile name="RollingFile" fileName="logs/camunda-swagger.log"
                      filePattern="logs/camunda-swagger-%d{yyyy-MM-dd}-%i.log.gz">
-            <PatternLayout pattern='[%-5level] %d{yyyy-MMM-dd HH:mm:ss.SSS} $${env:HOSTNAME} [%t] %C - %replace{%m}{(?i)("emailAddress"|"postCode"|"phoneNumber"|"stateOrProvince"|"street2"|"street1"|"city"|"name"|"id"|"value"|"mobile"|"country"|"firstName"|"lastName"|"formattedName"|"givenName"|"fullName"|"familyName"|"preferredGivenName"|"location"|"customer"|"account"|"user"|"gender"|"dateOfBirth"|"email"|"address"|"credit"|"card"|"passport"|"medicare"|"drivers"|"licence")\s*:\s*(?:"[^"]*"|\[.*?\])}{$1: "*** *** ***"}%n'/>
+            <!-- First replace JSON-style fields and values, then catch direct values -->
+            <PatternLayout pattern='[%-5level] %d{yyyy-MMM-dd HH:mm:ss.SSS} $${env:HOSTNAME} [%t] %C - %replace{%replace{%m}{(?i)("emailAddress"|"postCode"|"phoneNumber"|"street2"|"street1"|"city"|"name"|"mobile"|"country"|"firstName"|"lastName"|"formattedName"|"givenName"|"fullName"|"familyName"|"preferredGivenName"|"location"|"customer"|"account"|"user"|"gender"|"dateOfBirth"|"email"|"address"|"credit"|"card"|"passport"|"medicare"|"drivers"|"licence")\s*:\s*(?:"[^"]*"|\[.*?\])}{$1: "*** MASKED ***"}}{(?i)\b(?:state|province|stateOrProvince)(?:\s*|:)\s*[A-Z]{2}\b}{state: "*** MASKED ***"}%n'/>
             <Policies>
                 <TimeBasedTriggeringPolicy />
                 <SizeBasedTriggeringPolicy size="10 MB"/>

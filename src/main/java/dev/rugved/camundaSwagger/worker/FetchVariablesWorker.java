@@ -1,7 +1,6 @@
 package dev.rugved.camundaSwagger.worker;
 
 import dev.rugved.camundaSwagger.service.ErrorHandlerService;
-import dev.rugved.camundaSwagger.util.LoggingUtil;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
 import io.camunda.zeebe.client.api.worker.JobClient;
 import io.camunda.zeebe.spring.client.annotation.JobWorker;
@@ -74,15 +73,9 @@ public class FetchVariablesWorker {
             output.put("installationMethod", installationMethod);
             output.putAll(productDetails);
 
-            // Use safe logging to prevent exposing sensitive data
-            Map<String, Object> loggingMap = new HashMap<>();
-            loggingMap.put("jobKey", job.getKey());
-            loggingMap.put("correlationId", "*** exists ***");
-            loggingMap.put("installationMethod", installationMethod);
-            // Only mention fields exist without showing values
-            loggingMap.put("productFields", String.join(", ", productDetails.keySet()));
-
-            LoggingUtil.logSafely(logger, "info", "Successfully extracted variables", loggingMap);
+            // Log success information
+            logger.info("Successfully extracted variables - jobKey: {}, installationMethod: {}, productFields: {}",
+                    job.getKey(), installationMethod, String.join(", ", productDetails.keySet()));
 
             // Complete the job with extracted variables
             client.newCompleteCommand(job.getKey())
@@ -93,8 +86,7 @@ public class FetchVariablesWorker {
             logger.debug("Completed fetchVariables job with key: {}", job.getKey());
 
         } catch (Exception e) {
-            String safeErrorMessage = LoggingUtil.sanitizeMessage(e.getMessage());
-            logger.error("Error processing {} job: {}", JOB_TYPE_FETCHVARIABLES, safeErrorMessage);
+            logger.error("Error processing {} job: {}", JOB_TYPE_FETCHVARIABLES, e.getMessage());
 
             // Handle error and complete the job with error information
             Map<String, Object> errorOutput = errorHandlerService.handleError(e, JOB_TYPE_FETCHVARIABLES);
@@ -122,7 +114,7 @@ public class FetchVariablesWorker {
                     }
                 } catch (Exception ex) {
                     logger.warn("Final attempt to extract correlationId failed for job: {}: {}",
-                            job.getKey(), LoggingUtil.sanitizeMessage(ex.getMessage()));
+                            job.getKey(), ex.getMessage());
                 }
             }
 
