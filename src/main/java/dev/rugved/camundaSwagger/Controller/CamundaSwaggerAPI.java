@@ -2,9 +2,10 @@ package dev.rugved.camundaSwagger.Controller;
 
 import dev.rugved.camundaSwagger.dto.StartProcessRequest;
 import dev.rugved.camundaSwagger.exception.BadRequestException;
+import dev.rugved.camundaSwagger.exception.ResourceNotFoundException;
 import io.camunda.zeebe.client.ZeebeClient;
+import io.camunda.zeebe.client.api.command.ClientStatusException;
 import io.camunda.zeebe.client.api.response.ProcessInstanceEvent;
-import jakarta.validation.Valid;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
-import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 @RestController
 @RequestMapping("/process")
@@ -49,29 +50,34 @@ public class CamundaSwaggerAPI implements CommandLineRunner {
             }
 
             // Start process instance
-            final ProcessInstanceEvent processInstanceEvent =
-                    zeebeClient
-                            .newCreateInstanceCommand()
-                            .bpmnProcessId(bpmnProcessId)
-                            .latestVersion()
-                            .variables(variables)
-                            .send()
-                            .join();
+            try {
+                final ProcessInstanceEvent processInstanceEvent =
+                        zeebeClient
+                                .newCreateInstanceCommand()
+                                .bpmnProcessId(bpmnProcessId)
+                                .latestVersion()
+                                .variables(variables)
+                                .send()
+                                .join();
 
-            // Log and return success response
-            long processInstanceKey = processInstanceEvent.getProcessInstanceKey();
-            LOG.info("Process instance created: " + processInstanceKey);
+                // Log and return success response
+                long processInstanceKey = processInstanceEvent.getProcessInstanceKey();
+                LOG.info("Process instance created: " + processInstanceKey);
 
-            return ResponseEntity.ok(
-                    Map.of("message", "Process instance started successfully",
-                            "processInstanceKey", processInstanceKey));
-
+                return ResponseEntity.ok(
+                        Map.of("message", "Process instance started successfully",
+                                "processInstanceKey", processInstanceKey));
+            } catch (Exception e) {
+                // Handle specific Zeebe client exceptions
+                return handleZeebeException(e);
+            }
         } catch (BadRequestException e) {
             // Re-throw BadRequestException to be handled by GlobalExceptionHandler
             throw e;
         } catch (Exception e) {
             // Let the GlobalExceptionHandler handle all other exceptions
-            throw handleZeebeException(e);
+            LOG.error("Unexpected error processing request", e);
+            throw e;
         }
     }
 
@@ -80,27 +86,43 @@ public class CamundaSwaggerAPI implements CommandLineRunner {
      */
     private RuntimeException handleZeebeException(Exception e) {
         String errorMessage = e.getMessage();
+        Throwable cause = e.getCause();
+
         LOG.error("Error in Zeebe operation: " + errorMessage, e);
 
-        if (errorMessage != null) {
-            if (errorMessage.contains("NOT_FOUND") || errorMessage.contains("not found")) {
-                return new dev.rugved.camundaSwagger.exception.ResourceNotFoundException(errorMessage);
+        // Handle Zeebe client status exceptions
+        if (cause instanceof ClientStatusException) {
+            ClientStatusException clientException = (ClientStatusException) cause;
+            String errorDetails = clientException.getMessage();
+
+            if (errorDetails.contains("NOT_FOUND")) {
+                if (errorDetails.contains("Expected to find process definition")) {
+                    throw new ResourceNotFoundException("Process definition not found: " +
+                            errorDetails.replaceAll(".*process ID '([^']+)'.*", "$1"));
+                }
+                throw new ResourceNotFoundException(errorDetails);
             }
 
-            if (errorMessage.contains("INVALID_ARGUMENT")) {
-                return new dev.rugved.camundaSwagger.exception.BadRequestException(errorMessage);
+            if (errorDetails.contains("INVALID_ARGUMENT")) {
+                throw new BadRequestException(errorDetails);
             }
 
-            if (errorMessage.contains("PERMISSION_DENIED") || errorMessage.contains("permission denied")) {
-                return new dev.rugved.camundaSwagger.exception.ForbiddenException(errorMessage);
+            if (errorDetails.contains("PERMISSION_DENIED")) {
+                throw new dev.rugved.camundaSwagger.exception.ForbiddenException(errorDetails);
             }
 
-            if (errorMessage.contains("UNAUTHENTICATED") || errorMessage.contains("expired")) {
-                return new dev.rugved.camundaSwagger.exception.UnauthorizedException(errorMessage);
+            if (errorDetails.contains("UNAUTHENTICATED") || errorDetails.contains("expired")) {
+                throw new dev.rugved.camundaSwagger.exception.UnauthorizedException(errorDetails);
             }
         }
 
-        return new dev.rugved.camundaSwagger.exception.ServiceUnavailableException(
+        // Check for execution exceptions
+        if (e instanceof ExecutionException && e.getCause() != null) {
+            return handleZeebeException((Exception) e.getCause());
+        }
+
+        // For all other cases
+        throw new dev.rugved.camundaSwagger.exception.ServiceUnavailableException(
                 errorMessage != null ? errorMessage : "An error occurred when communicating with Zeebe engine");
     }
 
