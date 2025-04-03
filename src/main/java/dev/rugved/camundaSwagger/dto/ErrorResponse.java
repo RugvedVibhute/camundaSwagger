@@ -5,17 +5,11 @@ public class ErrorResponse {
     private String error;
     private String errorDescription;
 
-    // Constructor for validation errors
+    // Constructor for all error types
     public ErrorResponse(String errorCode, String error, String errorDescription) {
         this.errorCode = errorCode;
         this.error = error;
         this.errorDescription = errorDescription;
-    }
-
-    // Constructor for server errors
-    public ErrorResponse(String errorCode, String error) {
-        this.errorCode = errorCode;
-        this.error = error;
     }
 
     // Getters and setters

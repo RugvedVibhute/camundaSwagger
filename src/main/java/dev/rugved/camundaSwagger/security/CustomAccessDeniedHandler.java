@@ -5,6 +5,8 @@ import dev.rugved.camundaSwagger.dto.ErrorResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.AccessDeniedException;
@@ -21,17 +23,23 @@ import static au.com.optus.renaissanceCamunda.security.SecurityErrorConstants.*;
  */
 public class CustomAccessDeniedHandler implements AccessDeniedHandler {
 
+    private static final Logger logger = LoggerFactory.getLogger(CustomAccessDeniedHandler.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response,
                        AccessDeniedException accessDeniedException) throws IOException, ServletException {
 
+        String errorDescription = FORBIDDEN_DESCRIPTION_PREFIX +
+                (accessDeniedException.getMessage() != null ? accessDeniedException.getMessage() : "Access is denied");
+
+        logger.error("Access denied: {}", errorDescription);
+
         // Create error response with the same format as GlobalExceptionHandler
         ErrorResponse errorResponse = new ErrorResponse(
                 FORBIDDEN_ERROR_CODE,
                 FORBIDDEN_ERROR_MESSAGE,
-                FORBIDDEN_DESCRIPTION_PREFIX + accessDeniedException.getMessage()
+                errorDescription
         );
 
         // Set response status and content type

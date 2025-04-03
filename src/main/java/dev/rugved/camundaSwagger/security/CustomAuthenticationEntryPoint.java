@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.rugved.camundaSwagger.dto.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.AuthenticationException;
@@ -20,17 +22,23 @@ import static au.com.optus.renaissanceCamunda.security.SecurityErrorConstants.*;
  */
 public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
+    private static final Logger logger = LoggerFactory.getLogger(CustomAuthenticationEntryPoint.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
                          AuthenticationException authException) throws IOException {
 
+        String errorDescription = UNAUTHORIZED_DESCRIPTION_PREFIX +
+                (authException.getMessage() != null ? authException.getMessage() : "Authentication required");
+
+        logger.error("Authentication failure: {}", errorDescription);
+
         // Create error response with the same format as GlobalExceptionHandler
         ErrorResponse errorResponse = new ErrorResponse(
                 UNAUTHORIZED_ERROR_CODE,
                 UNAUTHORIZED_ERROR_MESSAGE,
-                UNAUTHORIZED_DESCRIPTION_PREFIX + authException.getMessage()
+                errorDescription
         );
 
         // Set response status and content type
