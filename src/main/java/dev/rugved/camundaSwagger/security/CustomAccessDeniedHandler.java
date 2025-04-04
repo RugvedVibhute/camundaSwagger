@@ -33,7 +33,8 @@ public class CustomAccessDeniedHandler implements AccessDeniedHandler {
         String errorDescription = FORBIDDEN_DESCRIPTION_PREFIX +
                 (accessDeniedException.getMessage() != null ? accessDeniedException.getMessage() : "Access is denied");
 
-        logger.error("Access denied: {}", errorDescription);
+        // Log at debug level to reduce log noise
+        logger.debug("Access denied: {}", errorDescription);
 
         // Create error response with the same format as GlobalExceptionHandler
         ErrorResponse errorResponse = new ErrorResponse(

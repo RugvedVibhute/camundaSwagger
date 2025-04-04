@@ -3,6 +3,9 @@ package dev.rugved.camundaSwagger.Controller;
 import dev.rugved.camundaSwagger.dto.StartProcessRequest;
 import dev.rugved.camundaSwagger.exception.BadRequestException;
 import dev.rugved.camundaSwagger.exception.ResourceNotFoundException;
+import dev.rugved.camundaSwagger.exception.ForbiddenException;
+import dev.rugved.camundaSwagger.exception.UnauthorizedException;
+import dev.rugved.camundaSwagger.exception.ServiceUnavailableException;
 import io.camunda.zeebe.client.ZeebeClient;
 import io.camunda.zeebe.client.api.command.ClientStatusException;
 import io.camunda.zeebe.client.api.response.ProcessInstanceEvent;
@@ -68,23 +71,25 @@ public class CamundaSwaggerAPI implements CommandLineRunner {
                         Map.of("message", "Process instance started successfully",
                                 "processInstanceKey", processInstanceKey));
             } catch (Exception e) {
-                // Handle specific Zeebe client exceptions
-                return handleZeebeException(e);
+                // Convert Zeebe exception to our application exception and throw it
+                throw convertZeebeException(e);
             }
-        } catch (BadRequestException e) {
-            // Re-throw BadRequestException to be handled by GlobalExceptionHandler
+        } catch (BadRequestException | ResourceNotFoundException |
+                 ForbiddenException | UnauthorizedException |
+                 ServiceUnavailableException e) {
+            // Re-throw our application exceptions to be handled by GlobalExceptionHandler
             throw e;
         } catch (Exception e) {
             // Let the GlobalExceptionHandler handle all other exceptions
             LOG.error("Unexpected error processing request", e);
-            throw e;
+            throw new ServiceUnavailableException("An unexpected error occurred: " + e.getMessage());
         }
     }
 
     /**
      * Helper method to convert Zeebe exceptions to our custom exceptions
      */
-    private RuntimeException handleZeebeException(Exception e) {
+    private RuntimeException convertZeebeException(Exception e) {
         String errorMessage = e.getMessage();
         Throwable cause = e.getCause();
 
@@ -97,32 +102,32 @@ public class CamundaSwaggerAPI implements CommandLineRunner {
 
             if (errorDetails.contains("NOT_FOUND")) {
                 if (errorDetails.contains("Expected to find process definition")) {
-                    throw new ResourceNotFoundException("Process definition not found: " +
+                    return new ResourceNotFoundException("Process definition not found: " +
                             errorDetails.replaceAll(".*process ID '([^']+)'.*", "$1"));
                 }
-                throw new ResourceNotFoundException(errorDetails);
+                return new ResourceNotFoundException(errorDetails);
             }
 
             if (errorDetails.contains("INVALID_ARGUMENT")) {
-                throw new BadRequestException(errorDetails);
+                return new BadRequestException(errorDetails);
             }
 
             if (errorDetails.contains("PERMISSION_DENIED")) {
-                throw new dev.rugved.camundaSwagger.exception.ForbiddenException(errorDetails);
+                return new ForbiddenException(errorDetails);
             }
 
             if (errorDetails.contains("UNAUTHENTICATED") || errorDetails.contains("expired")) {
-                throw new dev.rugved.camundaSwagger.exception.UnauthorizedException(errorDetails);
+                return new UnauthorizedException(errorDetails);
             }
         }
 
         // Check for execution exceptions
         if (e instanceof ExecutionException && e.getCause() != null) {
-            return handleZeebeException((Exception) e.getCause());
+            return convertZeebeException((Exception) e.getCause());
         }
 
         // For all other cases
-        throw new dev.rugved.camundaSwagger.exception.ServiceUnavailableException(
+        return new ServiceUnavailableException(
                 errorMessage != null ? errorMessage : "An error occurred when communicating with Zeebe engine");
     }
 

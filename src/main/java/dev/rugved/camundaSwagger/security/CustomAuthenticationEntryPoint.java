@@ -32,7 +32,16 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
         String errorDescription = UNAUTHORIZED_DESCRIPTION_PREFIX +
                 (authException.getMessage() != null ? authException.getMessage() : "Authentication required");
 
-        logger.error("Authentication failure: {}", errorDescription);
+        // Only log at debug level for common authentication errors
+        // This reduces log noise while still keeping the information available when needed
+        if (errorDescription.contains("Full authentication is required") ||
+                errorDescription.contains("Authentication failed") ||
+                errorDescription.contains("Access is denied")) {
+            logger.debug("Authentication required: {}", errorDescription);
+        } else {
+            // Log other, potentially more interesting authentication errors at info level
+            logger.info("Authentication failure: {}", errorDescription);
+        }
 
         // Create error response with the same format as GlobalExceptionHandler
         ErrorResponse errorResponse = new ErrorResponse(
