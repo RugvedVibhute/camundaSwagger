@@ -211,61 +211,41 @@ public class ResponseBuilderWorker {
                 Map<String, Object> otherAddress = otherAddresses.get(0);
 
                 // Add soldToAddress
-                if (otherAddress.containsKey("soldToAddressId") && otherAddress.containsKey("soldToAddressRole")) {
-                    boolean soldToExists = false;
-                    for (Map<String, Object> party : relatedParty) {
-                        if ("soldToAddress".equals(getStringValue(party, "@referredType"))) {
-                            soldToExists = true;
-                            break;
-                        }
-                    }
-
-                    if (!soldToExists) {
-                        Map<String, Object> soldToParty = new HashMap<>();
-                        soldToParty.put("id", otherAddress.get("soldToAddressId"));
-                        soldToParty.put("role", otherAddress.get("soldToAddressRole"));
-                        soldToParty.put("@referredType", "soldToAddress");
-                        relatedParty.add(soldToParty);
-                    }
-                }
+                addAddressIfNotExists(relatedParty, otherAddress, "soldToAddressId", "soldToAddressRole", "soldToAddress");
 
                 // Add networkSiteAddress
-                if (otherAddress.containsKey("networkSiteAddressId") && otherAddress.containsKey("networkSiteAddressRole")) {
-                    boolean networkSiteExists = false;
-                    for (Map<String, Object> party : relatedParty) {
-                        if ("networkSiteAddress".equals(getStringValue(party, "@referredType"))) {
-                            networkSiteExists = true;
-                            break;
-                        }
-                    }
-
-                    if (!networkSiteExists) {
-                        Map<String, Object> networkSiteParty = new HashMap<>();
-                        networkSiteParty.put("id", otherAddress.get("networkSiteAddressId"));
-                        networkSiteParty.put("role", otherAddress.get("networkSiteAddressRole"));
-                        networkSiteParty.put("@referredType", "networkSiteAddress");
-                        relatedParty.add(networkSiteParty);
-                    }
-                }
+                addAddressIfNotExists(relatedParty, otherAddress, "networkSiteAddressId", "networkSiteAddressRole", "networkSiteAddress");
 
                 // Add additionalPartnerAddress
-                if (otherAddress.containsKey("additionalPartnerAddressId") && otherAddress.containsKey("additionalPartnerAddressRole")) {
-                    boolean additionalPartnerExists = false;
-                    for (Map<String, Object> party : relatedParty) {
-                        if ("additionalPartnerAddress".equals(getStringValue(party, "@referredType"))) {
-                            additionalPartnerExists = true;
-                            break;
-                        }
-                    }
+                addAddressIfNotExists(relatedParty, otherAddress, "additionalPartnerAddressId", "additionalPartnerAddressRole", "additionalPartnerAddress");
+            }
+        }
+    }
 
-                    if (!additionalPartnerExists) {
-                        Map<String, Object> additionalPartnerParty = new HashMap<>();
-                        additionalPartnerParty.put("id", otherAddress.get("additionalPartnerAddressId"));
-                        additionalPartnerParty.put("role", otherAddress.get("additionalPartnerAddressRole"));
-                        additionalPartnerParty.put("@referredType", "additionalPartnerAddress");
-                        relatedParty.add(additionalPartnerParty);
-                    }
+    /**
+     * Helper method to add an address to related party if it doesn't already exist
+     */
+    private void addAddressIfNotExists(List<Map<String, Object>> relatedParty,
+                                       Map<String, Object> otherAddress,
+                                       String idField,
+                                       String roleField,
+                                       String referredType) {
+        if (otherAddress.containsKey(idField) && otherAddress.containsKey(roleField)) {
+            boolean addressExists = false;
+            for (Map<String, Object> party : relatedParty) {
+                if (referredType.equals(getStringValue(party, "@referredType"))) {
+                    addressExists = true;
+                    break;
                 }
+            }
+
+            if (!addressExists) {
+                Map<String, Object> addressParty = new HashMap<>();
+                addressParty.put("id", otherAddress.get(idField));
+                addressParty.put("role", otherAddress.get(roleField));
+                addressParty.put("@referredType", referredType);
+                relatedParty.add(addressParty);
+                logger.debug("Added {} party to relatedParty with id: {}", referredType, otherAddress.get(idField));
             }
         }
     }
@@ -277,6 +257,8 @@ public class ResponseBuilderWorker {
     private void addHardwareInfo(Map<String, Object> variables, Map<String, Object> finalResponse) {
         String ntuRequired = getStringValue(variables, "ntuRequired");
         List<Map<String, Object>> shippingOrderItems = (List<Map<String, Object>>) finalResponse.get("shippingOrderItem");
+
+        logger.debug("Processing hardware info with ntuRequired={}", ntuRequired);
 
         if ("Yes".equalsIgnoreCase(ntuRequired)) {
             addYesNtuHardwareInfo(variables, shippingOrderItems);
@@ -300,6 +282,9 @@ public class ResponseBuilderWorker {
         String aaUniSfp = getStringValue(variables, "aaUniSfp");
         String skuId = getStringValue(variables, "skuId");
 
+        logger.debug("Processing Yes NTU hardware info - found values: ntuType={}, ntuNniSfp={}, aaSfp={}, aaUniSfp={}",
+                ntuType != null, ntuNniSfp != null, aaSfp != null, aaUniSfp != null);
+
         // Process each shipping order item
         for (Map<String, Object> item : shippingOrderItems) {
             Map<String, Object> shipment = (Map<String, Object>) item.get("shipment");
@@ -317,11 +302,13 @@ public class ResponseBuilderWorker {
                                 if (NTU_PRODUCT_SPEC_ID.equals(productSpecId)) {
                                     addNtuHardwareInfo(product, ntuType, ntuNniSfp, aaSfp,
                                             ntuTypeSkuId, ntuNniSfpSkuId, aaSfpSkuId);
+                                    logger.debug("Added NTU hardware info to NTU product");
                                 }
 
                                 // Add UNI-related hardware info to the UNI product
                                 else if (TARGET_PRODUCT_SPEC_ID.equals(productSpecId)) {
                                     addUniHardwareInfo(product, aaUniSfp, skuId, true);
+                                    logger.debug("Added UNI hardware info to UNI product (Yes NTU case)");
                                 }
                             }
                         }
@@ -340,6 +327,9 @@ public class ResponseBuilderWorker {
         String aaUniSfp = getStringValue(variables, "aaUniSfp");
         String skuId = getStringValue(variables, "skuId");
 
+        logger.debug("Processing No NTU hardware info - found values: aaUniSfp={}, skuId={}",
+                aaUniSfp != null, skuId != null);
+
         // We only add UNI-related info in this case
         for (Map<String, Object> item : shippingOrderItems) {
             Map<String, Object> shipment = (Map<String, Object>) item.get("shipment");
@@ -356,6 +346,7 @@ public class ResponseBuilderWorker {
                                 // Add UNI-related hardware info to the UNI product
                                 if (TARGET_PRODUCT_SPEC_ID.equals(productSpecId)) {
                                     addUniHardwareInfo(product, aaUniSfp, skuId, false);
+                                    logger.debug("Added UNI hardware info to UNI product (No NTU case)");
                                 }
                             }
                         }
@@ -394,28 +385,34 @@ public class ResponseBuilderWorker {
         }
 
         // Add characteristics that don't already exist
-        if (!ntuTypeExists) {
+        if (!ntuTypeExists && ntuType != null) {
             addCharacteristic(characteristics, "NTU Type", ntuType);
+            logger.debug("Added NTU Type characteristic: {}", ntuType);
         }
 
-        if (!ntuNniSfpExists) {
+        if (!ntuNniSfpExists && ntuNniSfp != null) {
             addCharacteristic(characteristics, "NTU NNI SFP", ntuNniSfp);
+            logger.debug("Added NTU NNI SFP characteristic: {}", ntuNniSfp);
         }
 
-        if (!aaSfpExists) {
+        if (!aaSfpExists && aaSfp != null) {
             addCharacteristic(characteristics, "AA SFP", aaSfp);
+            logger.debug("Added AA SFP characteristic: {}", aaSfp);
         }
 
-        if (!ntuTypeSkuIdExists) {
+        if (!ntuTypeSkuIdExists && ntuTypeSkuId != null) {
             addCharacteristic(characteristics, "NTU Type SKU ID", ntuTypeSkuId);
+            logger.debug("Added NTU Type SKU ID characteristic: {}", ntuTypeSkuId);
         }
 
-        if (!ntuNniSfpSkuIdExists) {
+        if (!ntuNniSfpSkuIdExists && ntuNniSfpSkuId != null) {
             addCharacteristic(characteristics, "NTU NNI SFP SKU ID", ntuNniSfpSkuId);
+            logger.debug("Added NTU NNI SFP SKU ID characteristic: {}", ntuNniSfpSkuId);
         }
 
-        if (!aaSfpSkuIdExists) {
+        if (!aaSfpSkuIdExists && aaSfpSkuId != null) {
             addCharacteristic(characteristics, "AA SFP SKU ID", aaSfpSkuId);
+            logger.debug("Added AA SFP SKU ID characteristic: {}", aaSfpSkuId);
         }
     }
 
@@ -431,6 +428,9 @@ public class ResponseBuilderWorker {
         String sfpName = isNtuRequired ? "UNI SFP" : "AA UNI SFP";
         String skuIdName = isNtuRequired ? "UNI SFP SKU ID" : "AA UNI SFP SKU ID";
 
+        logger.debug("UNI hardware info - isNtuRequired={}, using names: {}, {}",
+                isNtuRequired, sfpName, skuIdName);
+
         // Check if characteristics already exist
         boolean sfpExists = false;
         boolean skuIdExists = false;
@@ -442,12 +442,14 @@ public class ResponseBuilderWorker {
         }
 
         // Add characteristics that don't already exist
-        if (!sfpExists) {
+        if (!sfpExists && aaUniSfp != null) {
             addCharacteristic(characteristics, sfpName, aaUniSfp);
+            logger.debug("Added {} characteristic: {}", sfpName, aaUniSfp);
         }
 
-        if (!skuIdExists) {
+        if (!skuIdExists && skuId != null) {
             addCharacteristic(characteristics, skuIdName, skuId);
+            logger.debug("Added {} characteristic: {}", skuIdName, skuId);
         }
     }
 
