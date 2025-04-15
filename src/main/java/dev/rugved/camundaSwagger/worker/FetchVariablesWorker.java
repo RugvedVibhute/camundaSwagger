@@ -11,13 +11,13 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import static dev.rugved.camundaSwagger.util.Constants.JOB_TYPE_FETCHVARIABLES;
 
 /**
  * Worker responsible for extracting and processing variables from the process instance.
  * This worker is triggered for job type "fetchVariables".
+ * Modified to be case-insensitive for field and characteristic names.
  */
 @Component
 public class FetchVariablesWorker {
@@ -99,11 +99,13 @@ public class FetchVariablesWorker {
                 // Try one more time to extract correlation ID directly from variables
                 try {
                     List<Map<String, Object>> characteristics =
-                            (List<Map<String, Object>>) variables.get("shippingOrderCharacteristic");
+                            getRequiredListCaseInsensitive(variables, "shippingOrderCharacteristic",
+                                    "Missing or invalid input: 'shippingOrderCharacteristic' is required and must be a list.");
+
                     if (characteristics != null) {
                         for (Map<String, Object> characteristic : characteristics) {
-                            if ("CorrelationId".equals(characteristic.get("name"))) {
-                                correlationId = (String) characteristic.get("value");
+                            if (isFieldMatching(characteristic, "name", "CorrelationId")) {
+                                correlationId = (String) characteristic.get(getMatchingKey(characteristic, "name"));
                                 if (correlationId != null) {
                                     errorOutput.put("correlationId", correlationId);
                                     logger.debug("Found correlationId in final attempt for job: {}", job.getKey());
@@ -136,27 +138,30 @@ public class FetchVariablesWorker {
      */
     private String extractStateOrProvince(Map<String, Object> variables) {
         // Check for related party array
-        List<Map<String, Object>> relatedParty = getRequiredListValue(variables, "relatedParty",
+        List<Map<String, Object>> relatedParty = getRequiredListCaseInsensitive(variables, "relatedParty",
                 "Missing or invalid input: 'relatedParty' is required and must be a list.");
 
         // Find the site address in related party
         for (Map<String, Object> party : relatedParty) {
-            if ("siteAddress".equals(party.get("role"))) {
+            if (isFieldMatching(party, "role", "siteAddress")) {
                 // Get contact medium for site address
-                List<Map<String, Object>> contactMedium = getRequiredListValue(party, "contactMedium",
+                List<Map<String, Object>> contactMedium = getRequiredListCaseInsensitive(party, "contactMedium",
                         "Missing or invalid input: 'contactMedium' is required for siteAddress.");
 
                 // Get characteristic with state/province
-                Map<String, Object> characteristic = getRequiredMapValue(contactMedium.get(0), "characteristic",
+                Map<String, Object> characteristic = getRequiredMapCaseInsensitive(contactMedium.get(0), "characteristic",
                         "Missing or invalid input: 'characteristic' is required for contactMedium.");
 
-                // Get state/province value
-                String stateOrProvince = Optional.ofNullable(characteristic.get("stateOrProvince"))
-                        .map(Object::toString)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Missing or invalid input: 'stateOrProvince' is required."));
+                // Get state/province value - try different possible field names
+                String stateOrProvince = getFieldValueIgnoreCase(characteristic,
+                        new String[]{"stateOrProvince", "state", "province", "stateorprovince"});
 
-                return stateOrProvince;
+                if (stateOrProvince != null) {
+                    return stateOrProvince;
+                }
+
+                throw new IllegalArgumentException(
+                        "Missing or invalid input: 'stateOrProvince', 'state' or 'province' is required.");
             }
         }
 
@@ -172,16 +177,17 @@ public class FetchVariablesWorker {
      */
     private String extractCorrelationId(Map<String, Object> variables) {
         // Get shipping order characteristics
-        List<Map<String, Object>> characteristics = getRequiredListValue(variables, "shippingOrderCharacteristic",
+        List<Map<String, Object>> characteristics = getRequiredListCaseInsensitive(variables, "shippingOrderCharacteristic",
                 "Missing or invalid input: 'shippingOrderCharacteristic' is required and must be a list.");
 
         // Find the correlation ID characteristic
         for (Map<String, Object> characteristic : characteristics) {
-            if ("CorrelationId".equals(characteristic.get("name"))) {
-                return Optional.ofNullable(characteristic.get("value"))
-                        .map(Object::toString)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Missing or invalid input: 'CorrelationId' value is required."));
+            if (isFieldMatching(characteristic, "name", "CorrelationId")) {
+                String value = getFieldValueIgnoreCase(characteristic, new String[]{"value"});
+                if (value != null) {
+                    return value;
+                }
+                throw new IllegalArgumentException("Missing or invalid input: 'CorrelationId' value is required.");
             }
         }
 
@@ -197,16 +203,17 @@ public class FetchVariablesWorker {
      */
     private String extractInstallationMethod(Map<String, Object> variables) {
         // Get shipping order characteristics
-        List<Map<String, Object>> characteristics = getRequiredListValue(variables, "shippingOrderCharacteristic",
+        List<Map<String, Object>> characteristics = getRequiredListCaseInsensitive(variables, "shippingOrderCharacteristic",
                 "Missing or invalid input: 'shippingOrderCharacteristic' is required and must be a list.");
 
         // Find the installation method characteristic
         for (Map<String, Object> characteristic : characteristics) {
-            if ("InstallationMethod".equals(characteristic.get("name"))) {
-                return Optional.ofNullable(characteristic.get("value"))
-                        .map(Object::toString)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Missing or invalid input: 'InstallationMethod' value is required."));
+            if (isFieldMatching(characteristic, "name", "InstallationMethod")) {
+                String value = getFieldValueIgnoreCase(characteristic, new String[]{"value"});
+                if (value != null) {
+                    return value;
+                }
+                throw new IllegalArgumentException("Missing or invalid input: 'InstallationMethod' value is required.");
             }
         }
 
@@ -226,7 +233,7 @@ public class FetchVariablesWorker {
         Integer ntuSizeFromNTUProduct = null; // Store NTU size separately if found in NTU product block
 
         // Get shipping order items
-        List<Map<String, Object>> shippingOrderItems = getRequiredListValue(variables, "shippingOrderItem",
+        List<Map<String, Object>> shippingOrderItems = getRequiredListCaseInsensitive(variables, "shippingOrderItem",
                 "Missing or invalid input: 'shippingOrderItem' is required and must be a list.");
 
         boolean targetProductFound = false;
@@ -234,31 +241,32 @@ public class FetchVariablesWorker {
         // Process shipping order items
         for (Map<String, Object> shippingOrderItem : shippingOrderItems) {
             // Get shipment
-            Map<String, Object> shipment = getRequiredMapValue(shippingOrderItem, "shipment",
+            Map<String, Object> shipment = getRequiredMapCaseInsensitive(shippingOrderItem, "shipment",
                     "Missing or invalid input: 'shipment' is required in shippingOrderItem.");
 
             // Get shipment items
-            List<Map<String, Object>> shipmentItems = getRequiredListValue(shipment, "shipmentItem",
+            List<Map<String, Object>> shipmentItems = getRequiredListCaseInsensitive(shipment, "shipmentItem",
                     "Missing or invalid input: 'shipmentItem' is required and must be a list.");
 
             // Process each shipment item
             for (Map<String, Object> shipmentItem : shipmentItems) {
                 // Get product
-                Map<String, Object> product = getRequiredMapValue(shipmentItem, "product",
+                Map<String, Object> product = getRequiredMapCaseInsensitive(shipmentItem, "product",
                         "Missing or invalid input: 'product' is required in shipmentItem.");
 
                 // Get product specification
-                Map<String, Object> productSpecification = getRequiredMapValue(product, "productSpecification",
+                Map<String, Object> productSpecification = getRequiredMapCaseInsensitive(product, "productSpecification",
                         "Missing or invalid input: 'productSpecification' is required in product.");
 
                 // Get product specification ID
-                String productSpecId = Optional.ofNullable(productSpecification.get("id"))
-                        .map(Object::toString)
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Missing or invalid input: 'id' is required in productSpecification."));
+                String productSpecId = getFieldValueIgnoreCase(productSpecification, new String[]{"id"});
+                if (productSpecId == null) {
+                    throw new IllegalArgumentException(
+                            "Missing or invalid input: 'id' is required in productSpecification.");
+                }
 
                 // Get product characteristics
-                List<Map<String, Object>> productCharacteristics = getRequiredListValue(product, "productCharacteristic",
+                List<Map<String, Object>> productCharacteristics = getRequiredListCaseInsensitive(product, "productCharacteristic",
                         "Missing or invalid input: 'productCharacteristic' is required and must be a list.");
 
                 // Process target product specification
@@ -271,10 +279,14 @@ public class FetchVariablesWorker {
                 else if (NTU_PRODUCT_SPEC_ID.equals(productSpecId)) {
                     // Fetch NTU Size from NTU Product
                     for (Map<String, Object> characteristic : productCharacteristics) {
-                        if ("ntuSize".equals(characteristic.get("name"))) {
-                            String valueStr = (String) characteristic.get("value");
-                            if (valueStr != null) {
-                                ntuSizeFromNTUProduct = Integer.parseInt(valueStr);
+                        if (isFieldMatching(characteristic, "name", "ntuSize")) {
+                            String value = getFieldValueIgnoreCase(characteristic, new String[]{"value"});
+                            if (value != null) {
+                                try {
+                                    ntuSizeFromNTUProduct = Integer.parseInt(value);
+                                } catch (NumberFormatException e) {
+                                    logger.warn("Invalid ntuSize format: {}", value);
+                                }
                             }
                         }
                     }
@@ -292,14 +304,14 @@ public class FetchVariablesWorker {
         validateRequiredProductDetails(productDetails);
 
         // Determine NTU size
-        if ("Yes".equals(productDetails.get("ntuRequired")) && ntuSizeFromNTUProduct != null) {
+        if ("Yes".equalsIgnoreCase((String) productDetails.get("ntuRequired")) && ntuSizeFromNTUProduct != null) {
             ntuSize = ntuSizeFromNTUProduct;
-        } else if ("Yes".equals(productDetails.get("ntuRequired")) && ntuSizeFromNTUProduct == null) {
+        } else if ("Yes".equalsIgnoreCase((String) productDetails.get("ntuRequired")) && ntuSizeFromNTUProduct == null) {
             throw new IllegalArgumentException(
                     "Missing or invalid input: 'ntuSize' is required when 'NTURequired' is 'Yes'.");
         }
 
-        productDetails.put("ntuSize", ntuSize);
+        productDetails.put("ntuSize", ntuSize.toString());
         return productDetails;
     }
 
@@ -312,25 +324,24 @@ public class FetchVariablesWorker {
     private void extractTargetProductCharacteristics(List<Map<String, Object>> productCharacteristics,
                                                      Map<String, Object> productDetails) {
         for (Map<String, Object> characteristic : productCharacteristics) {
-            String name = (String) characteristic.get("name");
-            String value = (String) characteristic.get("value");
+            String name = getFieldValueIgnoreCase(characteristic, new String[]{"name"});
+            String value = getFieldValueIgnoreCase(characteristic, new String[]{"value"});
 
-            switch (name) {
-                case "InterfaceType":
-                    productDetails.put("uniInterfaceType", value);
-                    break;
-                case "NTURequired":
-                    productDetails.put("ntuRequired", value);
-                    break;
-                case "UNIPortCapacity":
-                    productDetails.put("uniPortCapacity", value);
-                    break;
-                case "distance":
-                    productDetails.put("distance", value);
-                    break;
-                case "networkElement":
-                    productDetails.put("networkElement", value);
-                    break;
+            if (name == null || value == null) {
+                continue;
+            }
+
+            // Case-insensitive matching for characteristic names
+            if (name.equalsIgnoreCase("InterfaceType")) {
+                productDetails.put("uniInterfaceType", value);
+            } else if (name.equalsIgnoreCase("NTURequired")) {
+                productDetails.put("ntuRequired", value);
+            } else if (name.equalsIgnoreCase("UNIPortCapacity")) {
+                productDetails.put("uniPortCapacity", value);
+            } else if (name.equalsIgnoreCase("distance")) {
+                productDetails.put("distance", value);
+            } else if (name.equalsIgnoreCase("networkElement")) {
+                productDetails.put("networkElement", value);
             }
         }
     }
@@ -365,38 +376,114 @@ public class FetchVariablesWorker {
     }
 
     /**
-     * Helper method to get a required list value from a map.
+     * Helper method to get a required list value from a map with case-insensitive key matching.
      *
      * @param map The source map
-     * @param key The key to retrieve
+     * @param key The key to retrieve (case-insensitive)
      * @param errorMsg The error message if the value is missing or not a list
      * @return The list value
      * @throws IllegalArgumentException if the value is missing or not a list
      */
     @SuppressWarnings("unchecked")
-    private List<Map<String, Object>> getRequiredListValue(Map<String, Object> map, String key, String errorMsg) {
-        Object value = map.get(key);
+    private List<Map<String, Object>> getRequiredListCaseInsensitive(Map<String, Object> map, String key, String errorMsg) {
+        String matchingKey = getMatchingKey(map, key);
+        if (matchingKey == null) {
+            throw new IllegalArgumentException(errorMsg);
+        }
+
+        Object value = map.get(matchingKey);
         if (value == null || !(value instanceof List)) {
             throw new IllegalArgumentException(errorMsg);
         }
+
         return (List<Map<String, Object>>) value;
     }
 
     /**
-     * Helper method to get a required map value from a map.
+     * Helper method to get a required map value from a map with case-insensitive key matching.
      *
      * @param map The source map
-     * @param key The key to retrieve
+     * @param key The key to retrieve (case-insensitive)
      * @param errorMsg The error message if the value is missing or not a map
      * @return The map value
      * @throws IllegalArgumentException if the value is missing or not a map
      */
     @SuppressWarnings("unchecked")
-    private Map<String, Object> getRequiredMapValue(Map<String, Object> map, String key, String errorMsg) {
-        Object value = map.get(key);
+    private Map<String, Object> getRequiredMapCaseInsensitive(Map<String, Object> map, String key, String errorMsg) {
+        String matchingKey = getMatchingKey(map, key);
+        if (matchingKey == null) {
+            throw new IllegalArgumentException(errorMsg);
+        }
+
+        Object value = map.get(matchingKey);
         if (value == null || !(value instanceof Map)) {
             throw new IllegalArgumentException(errorMsg);
         }
+
         return (Map<String, Object>) value;
+    }
+
+    /**
+     * Finds a matching key in a map regardless of case.
+     *
+     * @param map The map to search in
+     * @param targetKey The key to look for (case-insensitive)
+     * @return The actual key from the map that matches the target key, or null if not found
+     */
+    private String getMatchingKey(Map<String, Object> map, String targetKey) {
+        if (map == null || targetKey == null) {
+            return null;
+        }
+
+        // First try exact match for efficiency
+        if (map.containsKey(targetKey)) {
+            return targetKey;
+        }
+
+        // Otherwise, do case-insensitive search
+        return map.keySet().stream()
+                .filter(key -> key.equalsIgnoreCase(targetKey))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Checks if a field in a map matches the expected value, ignoring case.
+     *
+     * @param map The map containing the field
+     * @param fieldName The name of the field to check (case-insensitive)
+     * @param expectedValue The expected value (case-insensitive)
+     * @return true if the field exists and matches the expected value, false otherwise
+     */
+    private boolean isFieldMatching(Map<String, Object> map, String fieldName, String expectedValue) {
+        String matchingKey = getMatchingKey(map, fieldName);
+        if (matchingKey == null) {
+            return false;
+        }
+
+        Object value = map.get(matchingKey);
+        return value != null && value.toString().equalsIgnoreCase(expectedValue);
+    }
+
+    /**
+     * Gets a field value from a map, trying multiple possible field names in order.
+     *
+     * @param map The map to get the value from
+     * @param possibleFields Array of possible field names to try (case-insensitive)
+     * @return The field value if found, null otherwise
+     */
+    private String getFieldValueIgnoreCase(Map<String, Object> map, String[] possibleFields) {
+        if (map == null || possibleFields == null) {
+            return null;
+        }
+
+        for (String field : possibleFields) {
+            String matchingKey = getMatchingKey(map, field);
+            if (matchingKey != null && map.get(matchingKey) != null) {
+                return map.get(matchingKey).toString();
+            }
+        }
+
+        return null;
     }
 }
