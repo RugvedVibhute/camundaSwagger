@@ -336,7 +336,8 @@ public class FetchVariablesWorker {
                 productDetails.put("uniInterfaceType", value);
             } else if (name.equalsIgnoreCase("NTURequired")) {
                 productDetails.put("ntuRequired", value);
-            } else if (name.equalsIgnoreCase("UNIPortCapacity")) {
+            } else if (name.equalsIgnoreCase("UNIPortCapacity") || name.equalsIgnoreCase("UNISpeed")) {
+                // Accept either UNIPortCapacity or UNISpeed and use internally as uniPortCapacity
                 productDetails.put("uniPortCapacity", value);
             } else if (name.equalsIgnoreCase("distance")) {
                 productDetails.put("distance", value);
