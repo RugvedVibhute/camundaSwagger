@@ -4,7 +4,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ConfigurationProperties(prefix = "kafka.service")
+@ConfigurationProperties(prefix = "service")
 public class ServiceConfigMapConfig {
 
     // Default path for the service config

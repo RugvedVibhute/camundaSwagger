@@ -1,6 +1,5 @@
 package dev.rugved.camundaSwagger.worker;
 
-import dev.rugved.camundaSwagger.model.ServiceKafkaConfig;
 import dev.rugved.camundaSwagger.service.ErrorHandlerService;
 import dev.rugved.camundaSwagger.service.ServiceConfigurationService;
 import io.camunda.zeebe.client.api.response.ActivatedJob;
@@ -37,6 +36,7 @@ public class ServiceConfigurationWorker {
         this.errorHandlerService = errorHandlerService;
     }
 
+    @SuppressWarnings("unchecked")
     @JobWorker(type = JOB_TYPE_SERVICE_CONFIG)
     public void fetchServiceConfig(final JobClient client, final ActivatedJob job) {
         Map<String, Object> output = new HashMap<>();
@@ -45,20 +45,25 @@ public class ServiceConfigurationWorker {
             logger.info("Processing service configuration job - jobKey: {}", job.getKey());
 
             // Get Service configuration from ConfigMap
-            ServiceKafkaConfig serviceConfig = serviceConfigService.getServiceConfiguration();
+            Map<String, Object> serviceConfig = serviceConfigService.getServiceConfiguration();
 
             if (serviceConfig == null) {
                 throw new IllegalArgumentException("Failed to retrieve service configuration from ConfigMap");
             }
 
-            // Add the service configuration values to output
-            output.put("serviceKafkaBootstrapServer", serviceConfig.getBootstrapServer());
-            output.put("serviceKafkaTopic", serviceConfig.getTopic());
-            output.put("serviceKafkaAdditionalProperties", serviceConfig.getAdditionalProperties());
+            // Extract Kafka configuration properties
+            output.put("serviceKafkaBootstrapServer", serviceConfig.get("bootstrap-server"));
+            output.put("serviceKafkaTopic", serviceConfig.get("topic"));
+            output.put("serviceKafkaAdditionalProperties", serviceConfig.get("additional-properties"));
 
-            // Add Jolt specifications
-            output.put("joltSpecIpne", serviceConfig.getJoltSpecIpne());
-            output.put("joltSpecNpis", serviceConfig.getJoltSpecNpis());
+            // Add Jolt specifications if present
+            if (serviceConfig.containsKey("jolt-spec-ipne")) {
+                output.put("joltSpecIpne", serviceConfig.get("jolt-spec-ipne"));
+            }
+
+            if (serviceConfig.containsKey("jolt-spec-npis")) {
+                output.put("joltSpecNpis", serviceConfig.get("jolt-spec-npis"));
+            }
 
             // Clean error fields
             output.put(ERROR_MESSAGE, null);
@@ -67,9 +72,9 @@ public class ServiceConfigurationWorker {
 
             logger.info("Successfully retrieved service configuration - jobKey: {}, bootstrap server found: {}, topic found: {}, jolt specs found: {}",
                     job.getKey(),
-                    serviceConfig.getBootstrapServer() != null,
-                    serviceConfig.getTopic() != null,
-                    serviceConfig.getJoltSpecIpne() != null && serviceConfig.getJoltSpecNpis() != null);
+                    serviceConfig.containsKey("bootstrap-server"),
+                    serviceConfig.containsKey("topic"),
+                    serviceConfig.containsKey("jolt-spec-ipne") && serviceConfig.containsKey("jolt-spec-npis"));
 
             // Complete the job with service configuration variables
             client.newCompleteCommand(job.getKey())
